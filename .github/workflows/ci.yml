@@ -76,3 +76,4 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL: http://localhost:3000/api/v1
           MAPTILER_API_KEY: placeholder
+          EXPO_PUBLIC_MAPTILER_API_KEY: placeholder
