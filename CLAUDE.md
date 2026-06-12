@@ -19,6 +19,26 @@ feature/   fix/   chore/   docs/   refactor/   test/   style/   perf/
 
 **Releases** (`release/vX.Y.Z`) branch off `dev` and merge into `main` via PR.
 
+### Commit discipline (required on every branch)
+
+Commit after each logical unit of work — not just at the end of a session. Each commit must:
+
+- **Be atomic** — one concern per commit. Don't bundle a DB migration with a UI change.
+- **Use conventional commit format**: `type(scope): description`
+  - `feat(api): add GET /venues endpoint`
+  - `chore(monorepo): init Turborepo with npm workspaces`
+  - `fix(mobile): correct distance filter haversine calculation`
+  - `docs(adr): add ADR-0008 NestJS API from day one`
+- **Have a meaningful message** — describe *what changed and why*, not just "update files" or "WIP".
+- **Pass at minimum**: no TypeScript errors, no lint errors. Don't commit broken state.
+
+Commit cadence examples:
+- Scaffold a new service → one commit per service (`chore(api): scaffold NestJS service`, `chore(mobile): init Expo app shell`)
+- Add an endpoint → one commit per endpoint + one for its tests
+- Update a doc or ADR → one commit per doc
+
+Never batch unrelated changes. Never commit with message "misc" or "wip" to a shared branch.
+
 ### PR process (required for every merge)
 
 When opening a PR, always populate:
@@ -90,6 +110,7 @@ Conventional commits (`feat:`, `fix:`, `chore:`, etc.) on all branches.
 | CMS | Sanity (editorial metadata only; syncs into Postgres on publish) |
 | Cache | Redis / Upstash (availability snapshots, short TTL) |
 | Sync worker | Supabase Edge Functions (cron) or `node-cron` on Railway/Render |
+| Maps | MapLibre (`@maplibre/maplibre-react-native`) + Maptiler tiles (OSM data) |
 | Mobile builds | EAS Build (Expo) |
 | Error tracking | Sentry (mobile + backend) |
 | Analytics | PostHog |
@@ -133,10 +154,10 @@ Five tables in Supabase Postgres (full schema in `docs/02-technical-design-doc.m
 
 ## Open decisions — confirm with owner before implementing
 
-1. **State management**: Architecture doc suggests React Query (TanStack Query) for server state. Owner has deep Redux Toolkit/RTK Query background and wants to confirm this before the data layer is scaffolded. Do not hardcode either choice into early boilerplate.
-2. **Branding/design system**: Possibly reusing owner's existing UIForge design system, possibly a fresh design. Focus on functional UI until this is confirmed.
-3. **App/package name and bundle ID**: Not yet chosen. Required before finalizing `app.json`/Expo config.
-4. **Accounts**: GitHub repo, Supabase project, Expo/EAS account, Google Maps/Places API key — none exist yet. Setting these up is part of Phase 0/1.
+1. ~~**State management**~~ — **Resolved: React Query (TanStack Query)** for server state. `useState`/`useReducer` for local UI state (filters, modals). See ADR-0007.
+2. ~~**Branding/design system**~~ — **Resolved: fresh design system for Smash.** Owner will supply design tokens/components after initial scaffolding. `packages/ui` starts minimal — seed with only what scaffold requires.
+3. ~~**App/package name and bundle ID**~~ — **Resolved: "Smash", bundle ID `com.rajanmali.smash`.**
+4. ~~**Accounts**~~ — **In progress:** Supabase project created (`sqqymvrqnkypofqlrnjw`), Expo/EAS account active (`notrajanmali`). Still needed: Maptiler account (maptiler.com, free tier), Apple Developer account confirmation, Google Play Console confirmation.
 
 ## Phase 1 implementation sequence
 
