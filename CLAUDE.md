@@ -32,7 +32,28 @@ After opening the PR, immediately:
 2. If all checks pass → merge automatically with `gh pr merge <number> --squash --delete-branch`.
 3. If any check fails → report the failure, do not merge.
 
-For hotfixes only: after merging into `main`, open a second PR from the same branch into `dev` and repeat the process.
+For hotfixes only: after merging into `main`, open a second PR from the same `hotfix/` branch into `dev` and repeat the process.
+
+### Release process
+
+Versioning follows **semver**: `MAJOR.MINOR.PATCH`
+- `PATCH` — bug fixes only
+- `MINOR` — new backwards-compatible features
+- `MAJOR` — breaking changes
+
+Steps to cut a release:
+
+1. **Branch** — create `release/vX.Y.Z` off `dev`.
+2. **Prep commit** — bump any version references (e.g. `app.json`, `package.json`) and update `CHANGELOG.md` if maintained. Commit as `chore: bump version to vX.Y.Z`.
+3. **PR to `main`** — open with label `release`, assignee `rajanmali`. Follow the standard PR process (CI must pass before merge). Use squash merge.
+4. **Tag and publish** — after the PR merges into `main`, run:
+   ```bash
+   gh release create vX.Y.Z --target main --title "vX.Y.Z" --generate-notes
+   ```
+   GitHub will auto-categorise the release notes from PR labels using `.github/release.yml`.
+5. **Sync back to `dev`** — open a PR from `main` → `dev` (title: `chore: sync vX.Y.Z release back to dev`), label `chore`, and merge it. This keeps `dev` aware of the exact release commit.
+
+The `release` label must exist on GitHub (create with `gh label create release --color 0052cc --description "Release"` if missing).
 
 ## Current status
 
