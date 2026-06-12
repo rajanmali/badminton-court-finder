@@ -4,9 +4,9 @@ Domain vocabulary and invariants for this codebase. Engineering skills read this
 
 ## Core domain concepts
 
-**Venue** — a physical location in Sydney where badminton courts can be booked. A venue is either *dedicated* (badminton-only centre) or *multi-sport*. Every venue has a `booking_url` that deep-links to its own booking platform — the app never handles booking or payment.
+**Venue** — a physical location in Sydney where badminton courts can be booked. A venue is either *dedicated* or *multi-sport*. **Dedicated** means its badminton courts are permanently configured for badminton: fixed nets, badminton-specific flooring or lines, not shared with other sports on a schedule rotation. A sports complex with a permanently set-up badminton hall qualifies as dedicated even if the broader premises has other facilities. A council hall that rotates between badminton and basketball nights is multi-sport. Every venue has a `booking_url` that deep-links to its own booking platform — the app never handles booking or payment.
 
-**Rate card** — a pricing rule for a venue. One venue has many rate cards (e.g. "Off-Peak Mon–Fri before 5pm", "Peak evenings and weekends"). Prices are always stored in **cents** (integer), never as floats.
+**Rate card** — a pricing rule for a venue. One venue has many rate cards (e.g. "Off-Peak Mon–Fri before 5pm", "Peak evenings and weekends"). Prices are always stored in **cents** (integer), never as floats. A rate card with no `time_range_start`/`time_range_end` is a valid flat/all-day rate. **Price-from** is the lowest `price_cents` across all of a venue's rate cards, formatted as AUD/hr. A venue with no rate cards is described as "Rates not listed" — this is the canonical phrase; do not use "free", "—", or a blank.
 
 **Opening hours** — per-day open/close times for a venue. Stored per day-of-week (0=Sunday…6=Saturday). Separate from rate cards.
 
@@ -23,6 +23,10 @@ Domain vocabulary and invariants for this codebase. Engineering skills read this
 **Widget** — home screen widget (Android first, iOS later) showing court availability for user-selected venues without opening the app. The widget reads from a **local sync store** (MMKV or SQLite) — it cannot make network calls directly. The app populates the local store via a WorkManager background task.
 
 **Booking platform** — the third-party SaaS a venue uses for court reservations (Sport Logic/intennis-style, Skedda, Pitchbooking, yepbooking, council systems). The app does not integrate with these for booking — only for availability data via partnerships.
+
+**Distance** — straight-line distance (haversine) between the user's location and a venue's `lat`/`lng`. Always labelled "X km away" in the UI — never "X km drive". Road distance is explicitly out of scope for Phase 1. Distance filter steps: 5 km / 10 km / 25 km / Any. Default is **Any** (all venues shown).
+
+**Default sort order** — dedicated venues first, then alphabetical within each group. When a distance filter is active, sort switches to distance ascending. This ordering is stable regardless of location permission state.
 
 ## Invariants
 
