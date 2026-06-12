@@ -50,15 +50,9 @@ Read `01-PRD.md` first for full scope, goals, and non-goals.
 
 ## 4. Open decisions (NOT yet made — flag to project owner before assuming)
 
-- **State management**: PRD/RFC suggest React Query, but the owner has deep
-  Redux Toolkit/RTK Query background and wants to research this before
-  committing. Do not hardcode this choice into early scaffolding without
-  confirming.
-- **Branding/design direction**: not yet decided (possibly reuse owner's
-  existing portfolio/UIForge design system, possibly fresh). Don't invest in
-  visual design polish until this is settled — focus on functional UI first.
-- **App name, package name / bundle ID**: not yet chosen — needed before Expo
-  config can be finalized.
+- ~~**State management**~~ — **Resolved: React Query (TanStack Query).** See ADR-0007.
+- ~~**Branding/design direction**~~ — **Resolved: fresh design system for Smash.** Owner will supply design tokens after initial scaffolding. `packages/ui` starts minimal.
+- ~~**App name, package name / bundle ID**~~ — **Resolved: "Smash", bundle ID `com.rajanmali.smash`.**
 - **Accounts**: GitHub repo, Supabase project, Expo/EAS account, Google
   Maps/Places API key — none of these exist yet. Setting these up is part of
   Phase 0/1 (see roadmap), not assumed to be pre-existing.
