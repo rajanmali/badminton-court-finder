@@ -19,6 +19,21 @@ feature/   fix/   chore/   docs/   refactor/   test/   style/   perf/
 
 **Releases** (`release/vX.Y.Z`) branch off `dev` and merge into `main` via PR.
 
+### PR process (required for every merge)
+
+When opening a PR, always populate:
+- **Title** — conventional commit format: `type: short description` (e.g. `feat: venue list screen`)
+- **Body** — `## Summary` (bullet points), `## Test plan` (checklist)
+- **Labels** — at least one of: `feature`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`
+- **Assignee** — always assign to `rajanmali`
+
+After opening the PR, immediately:
+1. Poll CI status with `gh pr checks <number> --watch` until all checks complete.
+2. If all checks pass → merge automatically with `gh pr merge <number> --squash --delete-branch`.
+3. If any check fails → report the failure, do not merge.
+
+For hotfixes only: after merging into `main`, open a second PR from the same branch into `dev` and repeat the process.
+
 ## Current status
 
 **No code has been written yet.** All planning documents live in `docs/`. Implementation begins at Phase 1 (see `docs/06-roadmap-and-milestones.md`). Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what still needs owner confirmation before scaffolding.
@@ -119,6 +134,20 @@ Venue outreach (sending emails in `docs/venue-outreach-plan.md`) runs in paralle
 - **Integration tests**: API endpoints against a real test database (Supabase local dev or Dockerized Postgres). Do not mock the database.
 - **E2E** (Detox or Maestro): 2-3 critical paths only (search → venue detail → deep link to booking page).
 - **Widget testing**: manual device testing required; WorkManager timing varies by OEM (Samsung vs. Pixel battery optimization).
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`github.com/rajanmali/badminton-court-finder`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo. Read `CONTEXT.md` at the root and `docs/adr/` before working in any area. See `docs/agents/domain.md`.
 
 ## iCal availability computation note
 
