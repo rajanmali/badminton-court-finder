@@ -120,6 +120,20 @@ Venue outreach (sending emails in `docs/venue-outreach-plan.md`) runs in paralle
 - **E2E** (Detox or Maestro): 2-3 critical paths only (search → venue detail → deep link to booking page).
 - **Widget testing**: manual device testing required; WorkManager timing varies by OEM (Samsung vs. Pixel battery optimization).
 
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`github.com/rajanmali/badminton-court-finder`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo. Read `CONTEXT.md` at the root and `docs/adr/` before working in any area. See `docs/agents/domain.md`.
+
 ## iCal availability computation note
 
 iCal feeds represent **bookings** (busy blocks), not availability directly. The adapter must compute "courts available" by subtracting booked events from venue capacity per time slot. This requires knowing court count and opening hours per venue, and assumes one iCal event = one court (verify this per venue — some events may block multiple courts).
