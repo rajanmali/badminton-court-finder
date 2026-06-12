@@ -22,7 +22,10 @@ Single-context repo:
 │   ├── 0003-normalization-adapter-pattern.md
 │   ├── 0004-ios-widget-deferred.md
 │   ├── 0005-supabase-sanity.md
-│   └── 0006-monorepo-git-workflow.md
+│   ├── 0006-monorepo-git-workflow.md        ← updated: Turborepo + npm workspaces
+│   ├── 0007-react-query-state-management.md
+│   ├── 0008-nestjs-api-from-day-one.md
+│   └── 0009-maplibre-maptiler.md
 └── docs/
     └── agents/   ← this directory
 ```
