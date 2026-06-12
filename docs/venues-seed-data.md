@@ -125,6 +125,8 @@ courts/hours, update this doc, then add to DB).
 }
 ```
 
-Lat/lng for each venue aren't included here — these are straightforward to
-geocode from suburb/address during Phase 1 setup (e.g. via Google Geocoding API
-once the Maps/Places API key exists).
+Lat/lng for each venue aren't included here. Look them up manually via Google Maps
+(search the address, right-click → copy coordinates) and hardcode them in the seed
+script — 7 venues takes ~5 minutes and avoids a geocoding API dependency entirely.
+Maptiler Geocoding API is an option if batch geocoding is ever needed (same account,
+no Google required).
