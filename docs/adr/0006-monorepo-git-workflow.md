@@ -8,7 +8,9 @@ Solo developer with multiple deployable units: mobile app, backend API, sync wor
 
 ## Decision
 
-Single monorepo with workspaces (`apps/`, `services/`, `packages/`).
+Single monorepo with workspaces (`apps/`, `services/`, `packages/`), orchestrated by **Turborepo** (with npm workspaces for package linking).
+
+Turborepo was chosen over Nx (too heavy for a solo developer; adds generators and module boundary enforcement that aren't needed yet) and plain npm workspaces (no task caching; `turbo build` only rebuilds what changed, which matters once the monorepo has multiple interdependent packages). Turborepo integrates cleanly with EAS Build.
 
 **Branch model:**
 - `main` — production. GitHub Pages serves from here. Never commit directly.
