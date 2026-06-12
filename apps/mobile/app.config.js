@@ -27,6 +27,12 @@ const config = {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1',
   },
   plugins: [
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission: 'Smash uses your location to find badminton courts near you.',
+      },
+    ],
     // Inject Maptiler API key into AndroidManifest.xml for MapLibre
     [
       withAndroidManifest,
