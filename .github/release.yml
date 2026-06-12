@@ -1,0 +1,27 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: "Features"
+      labels:
+        - feature
+    - title: "Bug Fixes"
+      labels:
+        - fix
+    - title: "Performance"
+      labels:
+        - perf
+    - title: "Refactors"
+      labels:
+        - refactor
+    - title: "Documentation"
+      labels:
+        - docs
+    - title: "Tests"
+      labels:
+        - test
+    - title: "Maintenance"
+      labels:
+        - chore
+        - style
