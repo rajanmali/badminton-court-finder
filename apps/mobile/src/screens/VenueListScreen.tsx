@@ -1,6 +1,6 @@
 import { getVenues } from '@smash/api-client';
 import { useQuery } from '@tanstack/react-query';
-import { useReducer } from 'react';
+import { useReducer, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   ActivityIndicator,
@@ -12,6 +12,8 @@ import {
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { VenueRow } from '../components/VenueRow';
 import { FilterBar } from '../components/FilterBar';
+import { VenueMap } from '../components/VenueMap';
+import { ViewToggle } from '../components/ViewToggle';
 import { useLocation } from '../hooks/useLocation';
 import { applyFilters, DEFAULT_FILTERS, type FilterState } from '../utils/filters';
 
@@ -22,6 +24,7 @@ function filterReducer(state: FilterState, patch: Partial<FilterState>): FilterS
 }
 
 export function VenueListScreen({ navigation }: Props) {
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [filters, dispatch] = useReducer(filterReducer, DEFAULT_FILTERS);
   const location = useLocation();
 
@@ -49,30 +52,37 @@ export function VenueListScreen({ navigation }: Props) {
 
   const filtered = applyFilters(data.venues, filters, location.coords);
 
+  const goToVenue = (venueId: string, venueName: string) =>
+    navigation.navigate('VenueDetail', { venueId, venueName });
+
   return (
     <View style={styles.screen}>
+      <ViewToggle mode={viewMode} onChange={setViewMode} />
       <FilterBar
         filters={filters}
         onChange={dispatch}
         locationDenied={location.permissionDenied}
       />
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <VenueRow
-            venue={item}
-            onPress={() =>
-              navigation.navigate('VenueDetail', {
-                venueId: item.id,
-                venueName: item.name,
-              })
-            }
-          />
-        )}
-        contentContainerStyle={filtered.length === 0 ? styles.emptyContainer : undefined}
-        ListEmptyComponent={<Text style={styles.empty}>No venues match your filters.</Text>}
-      />
+      {viewMode === 'list' ? (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <VenueRow
+              venue={item}
+              onPress={() => goToVenue(item.id, item.name)}
+            />
+          )}
+          contentContainerStyle={filtered.length === 0 ? styles.emptyContainer : undefined}
+          ListEmptyComponent={<Text style={styles.empty}>No venues match your filters.</Text>}
+        />
+      ) : (
+        <VenueMap
+          venues={filtered}
+          userCoords={location.coords}
+          onVenuePress={goToVenue}
+        />
+      )}
     </View>
   );
 }
