@@ -28,6 +28,9 @@ export function VenueRow({ venue, onPress }: Props) {
         <Text style={styles.courts}>
           {venue.courtCount} {venue.courtCount === 1 ? 'court' : 'courts'}
         </Text>
+        {venue.distanceKm !== null && (
+          <Text style={styles.distance}>{venue.distanceKm.toFixed(1)} km</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -87,5 +90,10 @@ const styles = StyleSheet.create({
   courts: {
     fontSize: 12,
     color: '#888',
+  },
+  distance: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
 });
