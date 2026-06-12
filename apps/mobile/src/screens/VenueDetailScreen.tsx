@@ -13,6 +13,7 @@ import {
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { formatPriceCents } from '../utils/pricing';
 import { dayLabel, formatDays, formatTime } from '../utils/datetime';
+import { getBookingAction } from '../utils/booking';
 import type { RateCard, OpeningHours } from '@smash/api-client';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VenueDetail'>;
@@ -85,14 +86,8 @@ export function VenueDetailScreen({ route }: Props) {
         )}
       </Section>
 
-      {/* Book button */}
-      <TouchableOpacity
-        style={styles.bookBtn}
-        activeOpacity={0.8}
-        onPress={() => Linking.openURL(venue.bookingUrl)}
-      >
-        <Text style={styles.bookBtnText}>Book a court</Text>
-      </TouchableOpacity>
+      {/* Book / contact CTA */}
+      <BookingCTA venue={venue} />
     </ScrollView>
   );
 }
@@ -140,6 +135,20 @@ function HoursRow({ dow, h }: { dow: number; h: OpeningHours | null }) {
         </Text>
       )}
     </View>
+  );
+}
+
+function BookingCTA({ venue }: { venue: { bookingUrl: string; phone: string | null; email: string | null } }) {
+  const action = getBookingAction(venue);
+  if (action.type === 'none') return null;
+  return (
+    <TouchableOpacity
+      style={styles.bookBtn}
+      activeOpacity={0.8}
+      onPress={() => Linking.openURL(action.href)}
+    >
+      <Text style={styles.bookBtnText}>{action.label}</Text>
+    </TouchableOpacity>
   );
 }
 
