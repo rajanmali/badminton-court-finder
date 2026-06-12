@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git workflow
+
+| Branch | Rule |
+|---|---|
+| `main` | Production. GitHub Pages serves from here. **Never commit directly.** |
+| `dev` | Default working branch. **Never commit directly.** |
+
+**All changes** branch off `dev` using one of these prefixes, then merge back into `dev` via PR:
+
+```
+feature/   fix/   chore/   docs/   refactor/   test/   style/   perf/
+```
+
+**Hotfixes** (`hotfix/`) branch off `main` and must merge into **both** `main` and `dev`.
+
+**Releases** (`release/vX.Y.Z`) branch off `dev` and merge into `main` via PR.
+
 ## Current status
 
 **No code has been written yet.** All planning documents live in `docs/`. Implementation begins at Phase 1 (see `docs/06-roadmap-and-milestones.md`). Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what still needs owner confirmation before scaffolding.
@@ -23,7 +40,7 @@ badminton-finder/
 └── .github/workflows/   # CI: lint, typecheck, test, build check on every PR
 ```
 
-Trunk-based development with short-lived feature branches. Conventional commits (`feat:`, `fix:`, `chore:`).
+Conventional commits (`feat:`, `fix:`, `chore:`, etc.) on all branches.
 
 ## Tech stack
 
