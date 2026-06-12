@@ -19,6 +19,21 @@ feature/   fix/   chore/   docs/   refactor/   test/   style/   perf/
 
 **Releases** (`release/vX.Y.Z`) branch off `dev` and merge into `main` via PR.
 
+### PR process (required for every merge)
+
+When opening a PR, always populate:
+- **Title** — conventional commit format: `type: short description` (e.g. `feat: venue list screen`)
+- **Body** — `## Summary` (bullet points), `## Test plan` (checklist)
+- **Labels** — at least one of: `feature`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`
+- **Assignee** — always assign to `rajanmali`
+
+After opening the PR, immediately:
+1. Poll CI status with `gh pr checks <number> --watch` until all checks complete.
+2. If all checks pass → merge automatically with `gh pr merge <number> --squash --delete-branch`.
+3. If any check fails → report the failure, do not merge.
+
+For hotfixes only: after merging into `main`, open a second PR from the same branch into `dev` and repeat the process.
+
 ## Current status
 
 **No code has been written yet.** All planning documents live in `docs/`. Implementation begins at Phase 1 (see `docs/06-roadmap-and-milestones.md`). Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what still needs owner confirmation before scaffolding.
