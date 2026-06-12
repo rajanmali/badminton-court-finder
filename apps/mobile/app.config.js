@@ -11,6 +11,9 @@ const config = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.rajanmali.smash',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: 'com.rajanmali.smash',
