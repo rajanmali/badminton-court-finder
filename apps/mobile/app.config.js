@@ -25,6 +25,9 @@ const config = {
   owner: 'notrajanmali',
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1',
+    eas: {
+      projectId: 'aaa9f3ed-dca9-4779-8b95-15db63604cfe',
+    },
   },
   plugins: [
     'expo-dev-client',
