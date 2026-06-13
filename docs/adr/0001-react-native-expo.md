@@ -1,6 +1,6 @@
 # ADR-0001: React Native (Expo) over native iOS/Android
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0010](0010-native-ios-swiftui.md)
 
 ## Context
 
