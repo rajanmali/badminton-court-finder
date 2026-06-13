@@ -85,3 +85,76 @@ apps/ios/
 │   └── Resources/           # Assets.xcassets
 └── SmashTests/              # Swift Testing unit tests
 ```
+
+## Releasing to TestFlight
+
+### Before archiving
+
+Set real production values in `Config/Secrets.xcconfig` (never commit this file):
+
+```xcconfig
+MAPTILER_API_KEY = your_maptiler_key_here
+
+# DSNs contain `//` which xcconfig would treat as a comment.
+# Use the `$()` empty-substitution trick to preserve the slashes:
+SENTRY_DSN = https:/$()/abc123@o123456.ingest.sentry.io/789
+
+# No production API is deployed yet — set this when the backend is live.
+# Same `$()` trick required for https:// URLs.
+API_BASE_URL = https:/$()/api.example.com/api/v1
+```
+
+> Sentry is only initialised in Release builds with a non-empty DSN, so leaving
+> `SENTRY_DSN` empty disables it entirely. Leave it empty until a Sentry project
+> is created at <https://sentry.io/>.
+
+### Bundle ID and App Store Connect identity
+
+The bundle ID `com.rajanmali.smash` is the **same identity** used by the
+previous Expo/EAS-managed app. Do NOT register a new bundle ID and do NOT
+revoke the Expo-managed certificates until the first native TestFlight build is
+verified end-to-end.
+
+Reuse the existing App Store Connect app entry for `com.rajanmali.smash`.
+
+### Building and uploading
+
+1. Open the project:
+
+   ```bash
+   xcodegen generate
+   open Smash.xcodeproj
+   ```
+
+2. In Xcode, select **Any iOS Device (arm64)** as the destination (not a
+   simulator).
+
+3. **Product → Archive** — this produces a Release build. Xcode will open the
+   Organizer on completion.
+
+4. In the Organizer, select the archive and click **Distribute App → App Store
+   Connect → Upload**. Follow the prompts (automatic signing or manual as
+   appropriate for your Apple Developer team).
+
+5. After upload, open [App Store Connect](https://appstoreconnect.apple.com/),
+   find the build under **TestFlight**, add internal testers, and submit.
+
+> No fastlane or Xcode Cloud is configured yet — upload is manual via the
+> Organizer. This is intentional at this stage.
+
+### Versioning
+
+Bump `MARKETING_VERSION` (user-visible, e.g. `1.0.1`) and
+`CURRENT_PROJECT_VERSION` (build number, must be monotonically increasing on
+App Store Connect) in `project.yml`, then regenerate:
+
+```bash
+# In project.yml under settings.base:
+#   MARKETING_VERSION: "1.0.1"
+#   CURRENT_PROJECT_VERSION: "2"
+
+xcodegen generate
+```
+
+App Store Connect rejects builds with a `CURRENT_PROJECT_VERSION` it has
+already seen — always increment it before archiving.
