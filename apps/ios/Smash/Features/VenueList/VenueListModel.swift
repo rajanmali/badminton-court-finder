@@ -25,6 +25,10 @@ final class VenueListModel {
 
     private(set) var state: LoadState = .loading
 
+    /// Which presentation is shown — list or map. Defaults to `.list`,
+    /// matching the RN screen's initial `useState('list')`.
+    var viewMode: ViewMode = .list
+
     /// Active filters. Defaults to `.default`; PR 8 makes these live.
     var filters: FilterState = .default
 

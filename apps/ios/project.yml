@@ -28,6 +28,17 @@ configFiles:
   Debug: Config/Shared.xcconfig
   Release: Config/Shared.xcconfig
 
+# Swift Package Manager dependencies.
+#
+# MapLibre Native iOS ships as a precompiled `MapLibre` xcframework via this
+# distribution repo. Package.resolved is gitignored, so the version is pinned
+# with `exactVersion` to keep CI and local builds reproducible. The first build
+# downloads the binary framework (a few minutes); CI caches it in .spm-cache.
+packages:
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    exactVersion: 6.27.0
+
 targets:
   Smash:
     type: application
@@ -35,6 +46,8 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - Smash
+    dependencies:
+      - package: MapLibre
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rajanmali.smash
