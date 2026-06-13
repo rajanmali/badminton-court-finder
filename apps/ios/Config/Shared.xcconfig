@@ -13,6 +13,7 @@
 // the file is present.
 API_BASE_URL = http:/$()/localhost:3000/api/v1
 MAPTILER_API_KEY =
+SENTRY_DSN =
 
 // Optional include so a missing Secrets.xcconfig doesn't hard-fail before the
 // copy step. Our CI/local flow always provides it.

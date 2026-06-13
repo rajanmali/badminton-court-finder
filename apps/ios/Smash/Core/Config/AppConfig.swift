@@ -49,4 +49,13 @@ enum AppConfig {
     static var maptilerAPIKey: String {
         Bundle.main.object(forInfoDictionaryKey: "MAPTILER_API_KEY") as? String ?? ""
     }
+
+    /// The Sentry DSN used for error tracking.
+    ///
+    /// Empty in Debug builds and when no DSN has been configured in
+    /// Secrets.xcconfig. `SentrySDK.start` is only called in Release builds
+    /// when this is non-empty — see `SmashApp.init()`.
+    static var sentryDSN: String {
+        Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String ?? ""
+    }
 }

@@ -38,6 +38,9 @@ packages:
   MapLibre:
     url: https://github.com/maplibre/maplibre-gl-native-distribution
     exactVersion: 6.27.0
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    exactVersion: 8.30.0
 
 targets:
   Smash:
@@ -48,6 +51,7 @@ targets:
       - Smash
     dependencies:
       - package: MapLibre
+      - package: Sentry
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rajanmali.smash
@@ -71,6 +75,7 @@ targets:
           NSAllowsLocalNetworking: true
         MAPTILER_API_KEY: $(MAPTILER_API_KEY)
         API_BASE_URL: $(API_BASE_URL)
+        SENTRY_DSN: $(SENTRY_DSN)
 
   SmashTests:
     type: bundle.unit-test

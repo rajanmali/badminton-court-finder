@@ -1,7 +1,23 @@
 import SwiftUI
+#if !DEBUG
+@preconcurrency import Sentry
+#endif
 
 @main
 struct SmashApp: App {
+
+    init() {
+        #if !DEBUG
+        let dsn = AppConfig.sentryDSN
+        if !dsn.isEmpty {
+            SentrySDK.start { options in
+                options.dsn = dsn
+                options.environment = "production"
+            }
+        }
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
