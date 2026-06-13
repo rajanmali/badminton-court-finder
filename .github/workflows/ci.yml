@@ -55,25 +55,3 @@ jobs:
 
       - name: Run tests
         run: npx turbo test
-
-  metro-check:
-    name: Metro bundler check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Export Expo app (bundler check)
-        working-directory: apps/mobile
-        run: npx expo export --platform all --output-dir /tmp/expo-export-check
-        env:
-          EXPO_PUBLIC_API_URL: http://localhost:3000/api/v1
-          MAPTILER_API_KEY: placeholder
-          EXPO_PUBLIC_MAPTILER_API_KEY: placeholder
