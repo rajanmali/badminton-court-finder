@@ -79,18 +79,14 @@ The `release` label must exist on GitHub (create with `gh label create release -
 
 ## Current status
 
-**No code has been written yet.** All planning documents live in `docs/`. Implementation begins at Phase 1 (see `docs/06-roadmap-and-milestones.md`). Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what still needs owner confirmation before scaffolding.
+The **native iOS Phase 1 app (Swift/SwiftUI) is implemented on `dev`**: venue list, map, detail, filters, and deep links against the NestJS API/Supabase. The React Native/Expo app and shared mobile packages have been removed (ADR-0010). Planning documents remain in `docs/`. Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what's next (Phase 2: live availability).
 
-## Planned monorepo structure
+## Monorepo structure
 
 ```
 badminton-finder/
 ├── apps/
-│   ├── mobile/          # React Native app (Expo managed workflow)
-│   └── widget/          # Shared widget logic if separated
-├── packages/
-│   ├── api-client/      # Typed API client, shared types
-│   └── ui/              # Shared design tokens/components
+│   └── ios/             # Native iOS app (Swift/SwiftUI, XcodeGen)
 ├── services/
 │   ├── api/             # Backend API (NestJS/TypeScript)
 │   └── sync-worker/     # Availability polling/sync jobs
@@ -104,17 +100,15 @@ Conventional commits (`feat:`, `fix:`, `chore:`, etc.) on all branches.
 
 | Layer | Technology |
 |---|---|
-| Mobile | React Native, Expo managed workflow |
-| Navigation | React Navigation |
-| Local storage (widget) | MMKV or `expo-sqlite` |
+| Mobile | Native iOS (Swift/SwiftUI, XcodeGen) — see ADR-0010 |
+| Maps | MapLibre Native iOS SDK + Maptiler tiles (OSM data) — see ADR-0009 |
 | Backend API | NestJS (TypeScript) |
 | Database | Supabase (Postgres) |
 | CMS | Sanity (editorial metadata only; syncs into Postgres on publish) |
 | Cache | Redis / Upstash (availability snapshots, short TTL) |
 | Sync worker | Supabase Edge Functions (cron) or `node-cron` on Railway/Render |
-| Maps | MapLibre (`@maplibre/maplibre-react-native`) + Maptiler tiles (OSM data) |
-| Mobile builds | EAS Build (Expo) |
-| Error tracking | Sentry (mobile + backend) |
+| Mobile builds | Xcode / TestFlight (EAS decommissioned) |
+| Error tracking | Sentry (sentry-cocoa on iOS; backend) |
 | Analytics | PostHog |
 
 ## Architecture: the normalization adapter pattern (ADR-003)
@@ -133,8 +127,8 @@ The normalized output lands in a single `availability_snapshots` table. The mobi
 ## Key architectural constraints
 
 - **No scraping** (ADR-002): Live availability comes only from explicit venue partnerships (iCal feeds, webhooks). Sport Logic/intennis-style platforms block robots.txt. This is a firm decision — do not revisit without a strong reason.
-- **Android widget cannot poll live**: The widget reads from a locally cached store (MMKV/SQLite) that the app syncs via WorkManager. The `GET /widget/summary` endpoint is optimized for minimal payload since it's fetched by a background task, not interactively.
-- **iOS widget requires native Swift** (ADR-004): WidgetKit is unavoidable — it cannot be done in React Native. iOS widget is Phase 4, after Android widget ships in Phase 3.
+- **Android deferred** (ADR-0010): Android development begins only after the iOS app shows traction. The Phase 3 Android widget is deferred accordingly.
+- **iOS widget requires native Swift** (ADR-004): WidgetKit is unavoidable. iOS widget is Phase 4 — a natural extension of the `apps/ios` Swift codebase via a shared app group container.
 - **All times stored UTC**, converted to `Australia/Sydney` at the API/app layer. Daylight saving transitions need test coverage.
 - **Prices stored as cents** (integers), not floats.
 
@@ -156,19 +150,14 @@ Five tables in Supabase Postgres (full schema in `docs/02-technical-design-doc.m
 
 ## Open decisions — confirm with owner before implementing
 
-1. ~~**State management**~~ — **Resolved: React Query (TanStack Query)** for server state. `useState`/`useReducer` for local UI state (filters, modals). See ADR-0007.
-2. ~~**Branding/design system**~~ — **Resolved: fresh design system for Smash.** Owner will supply design tokens/components after initial scaffolding. `packages/ui` starts minimal — seed with only what scaffold requires.
+1. ~~**State management**~~ — **Resolved:** Swift URLSession client with retry-2 logic; SwiftUI `NavigationStack` model lifetime for list state. No React Query equivalent. See ADR-0007/ADR-0010.
+2. ~~**Branding/design system**~~ — **Resolved:** fresh design system for Smash; tokens live in `apps/ios/Smash/DesignSystem/Tokens.swift`. Owner to supply expanded tokens/components as needed.
 3. ~~**App/package name and bundle ID**~~ — **Resolved: "Smash", bundle ID `com.rajanmali.smash`.**
-4. ~~**Accounts**~~ — **In progress:** Supabase project created (`sqqymvrqnkypofqlrnjw`), Expo/EAS account active (`notrajanmali`). Still needed: Maptiler account (maptiler.com, free tier), Apple Developer account confirmation, Google Play Console confirmation.
+4. ~~**Accounts**~~ — **Resolved:** Supabase project `sqqymvrqnkypofqlrnjw` active and wired; Maptiler account active and wired (ADR-0009). **Expo/EAS decommissioned.** Google Maps/Places not used — MapLibre/Maptiler per ADR-0009. Apple Developer account active (Xcode/TestFlight). Google Play Console confirmed but inactive until Android work begins.
 
-## Phase 1 implementation sequence
+## Phase 1 — done
 
-1. Confirm open decisions above (especially state management — affects data layer structure).
-2. Scaffold monorepo, CI skeleton, empty Expo app shell with navigation.
-3. Set up Supabase: create `venues`, `rate_cards`, `opening_hours` tables (skip `availability_partnerships`/`availability_snapshots` until Phase 2).
-4. Seed database from `docs/venues-seed-data.md`.
-5. Build venue list (map view) + detail screens against seeded data.
-6. Wire up deep links to venue booking pages.
+Phase 1 (static directory) is implemented: native iOS app (Swift/SwiftUI) with venue list, map, detail, filters, and deep links against the NestJS API/Supabase. Next is Phase 2 (live availability). See `docs/06-roadmap-and-milestones.md`.
 
 Venue outreach (sending emails in `docs/venue-outreach-plan.md`) runs in parallel and has zero dependency on any of the above.
 
