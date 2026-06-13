@@ -22,16 +22,25 @@ enum Route: Hashable {
 // MARK: - Root view
 
 /// Hosts the app-wide `NavigationStack` and maps ``Route`` values to screens.
+///
+/// The stack carries an explicit `path` binding so non-`NavigationLink`
+/// callers (the map's pin-tap handler) can push programmatically. Value-based
+/// `NavigationLink(value:)` in the list rows appends to this same path, so the
+/// list continues to work unchanged.
 struct RootView: View {
+    @State private var path: [Route] = []
+
     var body: some View {
-        NavigationStack {
-            VenueListScreen()
-                .navigationDestination(for: Route.self) { route in
-                    switch route {
-                    case let .venueDetail(id, name):
-                        VenueDetailScreen(venueId: id, venueName: name)
-                    }
+        NavigationStack(path: $path) {
+            VenueListScreen(onSelectVenue: { id, name in
+                path.append(.venueDetail(id: id, name: name))
+            })
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case let .venueDetail(id, name):
+                    VenueDetailScreen(venueId: id, venueName: name)
                 }
+            }
         }
     }
 }
