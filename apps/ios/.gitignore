@@ -1,0 +1,16 @@
+# Generated Xcode project (XcodeGen generates this from project.yml)
+*.xcodeproj
+
+# Generated Info.plist files (XcodeGen writes these from the `info:` keys in project.yml)
+Smash/Info.plist
+SmashTests/Info.plist
+
+# Secrets (copy Config/Secrets.example.xcconfig → Config/Secrets.xcconfig)
+Config/Secrets.xcconfig
+
+# Build artifacts
+DerivedData/
+.build/
+*.xcuserstate
+.spm-cache/
+xcuserdata/

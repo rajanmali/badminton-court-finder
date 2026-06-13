@@ -1,0 +1,86 @@
+name: Smash
+
+options:
+  bundleIdPrefix: com.rajanmali
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+# Project-level build settings shared by every target.
+# Swift 6.2 language mode with default MainActor isolation (ADR-0010).
+settings:
+  base:
+    SWIFT_VERSION: "6.2"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0.0"
+    GENERATE_INFOPLIST_FILE: NO
+    # CODE_SIGNING_ALLOWED is intentionally NOT set here — pass it on the
+    # xcodebuild command line in CI/local (CODE_SIGNING_ALLOWED=NO).
+
+# Debug/Release both source the shared xcconfig, which #includes the
+# gitignored Secrets.xcconfig (copied from Secrets.example.xcconfig).
+configFiles:
+  Debug: Config/Shared.xcconfig
+  Release: Config/Shared.xcconfig
+
+targets:
+  Smash:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - Smash
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rajanmali.smash
+        PRODUCT_NAME: Smash
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: Smash/Info.plist
+      properties:
+        CFBundleDisplayName: Smash
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSLocationWhenInUseUsageDescription: "Smash uses your location to find badminton courts near you."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        MAPTILER_API_KEY: $(MAPTILER_API_KEY)
+        API_BASE_URL: $(API_BASE_URL)
+
+  SmashTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - SmashTests
+    dependencies:
+      - target: Smash
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rajanmali.smash.tests
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: SmashTests/Info.plist
+
+schemes:
+  Smash:
+    build:
+      targets:
+        Smash: all
+        SmashTests: [test]
+    test:
+      targets:
+        - SmashTests
+      gatherCoverageData: true
