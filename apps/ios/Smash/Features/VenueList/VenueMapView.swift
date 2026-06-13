@@ -3,12 +3,13 @@ import SwiftUI
 
 // MARK: - VenueMapView
 
-/// The map presentation of the venue list. Ports the base of `VenueMap.tsx`.
+/// The map presentation of the venue list. Ports `VenueMap.tsx`.
 ///
-/// This PR wires up only the dependency, the styled basemap, and the camera —
-/// pins, layers, and the tap handler are deferred to the next PR (matching the
-/// orchestration plan). The public surface therefore takes only `userCoords`
-/// for now; `venues` / `onVenueTap` arrive with the pin layer.
+/// Renders the styled MapTiler basemap plus venue pins. Each venue is one point
+/// feature in a single GeoJSON-style shape source ("venues") with three stacked
+/// style layers — white rings, data-driven green/blue dots, first-letter labels.
+/// Tapping a pin reads its `id`/`name` and forwards them via ``onVenueTap`` so
+/// the caller can push the venue detail.
 ///
 /// ## No-key behaviour
 /// When ``AppConfig/maptilerAPIKey`` is empty (CI placeholder secrets, or a
@@ -17,7 +18,9 @@ import SwiftUI
 /// an inline centered grey message — the parity of RN's
 /// "EXPO_PUBLIC_MAPTILER_API_KEY is not set" state.
 struct VenueMapView: View {
+    let venues: [VenueListItem]
     let userCoords: UserCoords?
+    let onVenueTap: (String, String) -> Void
 
     var body: some View {
         if AppConfig.maptilerAPIKey.isEmpty {
@@ -28,9 +31,44 @@ struct VenueMapView: View {
                 .padding(Spacing.lg)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            VenueMapRepresentable(userCoords: userCoords)
-                .ignoresSafeArea()
+            VenueMapRepresentable(
+                venues: venues,
+                userCoords: userCoords,
+                onVenueTap: onVenueTap
+            )
+            .ignoresSafeArea()
         }
+    }
+}
+
+// MARK: - Pin feature building (pure helpers)
+
+/// The attribute dictionary attached to a venue's point feature.
+///
+/// Factored out as a pure function (no MapLibre types) so the data-driven
+/// values that the style layers depend on — `dedicated` as `0|1` and the
+/// uppercased first letter — are unit-testable without instantiating
+/// `MLNPointFeature`. Mirrors `VenueMap.tsx`'s feature `properties`, plus a
+/// precomputed `letter` (avoids a fragile MGL string-slice expression in the
+/// symbol layer).
+func pinAttributes(for venue: VenueListItem) -> [String: Sendable] {
+    [
+        "id": venue.id,
+        "name": venue.name,
+        "dedicated": venue.dedicatedBadminton ? 1 : 0,
+        "letter": String(venue.name.prefix(1)).uppercased(),
+    ]
+}
+
+/// Builds one `MLNPointFeature` per venue, the shape backing the "venues"
+/// source. Coordinate uses CLLocationCoordinate2D (lat, lng); attributes come
+/// from ``pinAttributes(for:)``.
+func makePointFeatures(_ venues: [VenueListItem]) -> [MLNPointFeature] {
+    venues.map { venue in
+        let feature = MLNPointFeature()
+        feature.coordinate = CLLocationCoordinate2D(latitude: venue.lat, longitude: venue.lng)
+        feature.attributes = pinAttributes(for: venue)
+        return feature
     }
 }
 
@@ -45,19 +83,22 @@ struct VenueMapView: View {
 /// concurrency, so the `@preconcurrency import MapLibre` above suppresses the
 /// Sendable friction, and the Coordinator's delegate callbacks use the same
 /// `nonisolated` + `MainActor.assumeIsolated` pattern proven in
-/// ``LiveLocationService`` (CLLocationManagerDelegate). The delegate is empty
-/// for now; the next PR adds `mapView(_:didFinishLoading:)` (pin layers) and
-/// the tap handler.
+/// ``LiveLocationService`` (CLLocationManagerDelegate).
 struct VenueMapRepresentable: UIViewRepresentable {
+    let venues: [VenueListItem]
     let userCoords: UserCoords?
+    let onVenueTap: (String, String) -> Void
 
     /// [lng, lat] order in MapLibre/GeoJSON; here we keep CLLocationCoordinate2D
     /// (lat, lng). Default fallback is Sydney CBD, matching `VenueMap.tsx`.
     private static let sydney = CLLocationCoordinate2D(latitude: -33.8688, longitude: 151.2093)
     private static let defaultZoom: Double = 10
 
+    /// The shared source id all three pin layers reference.
+    private static let sourceID = "venues"
+
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(venues: venues, onVenueTap: onVenueTap)
     }
 
     func makeUIView(context: Context) -> MLNMapView {
@@ -71,18 +112,116 @@ struct VenueMapRepresentable: UIViewRepresentable {
         } ?? Self.sydney
         mapView.setCenter(center, zoomLevel: Self.defaultZoom, animated: false)
 
+        // Tap-to-navigate: a single tap is hit-tested against the pin layers.
+        let tap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleTap(_:))
+        )
+        mapView.addGestureRecognizer(tap)
+
         return mapView
     }
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
-        // Camera is set once in makeUIView for this PR. Recentre on later
-        // userCoords changes happens with the pin work; keep this minimal so the
-        // dependency integration stays isolated.
+        // Keep the coordinator's view of the world current so a later
+        // didFinishLoading (and the tap handler) act on the freshest values.
+        context.coordinator.venues = venues
+        context.coordinator.onVenueTap = onVenueTap
+
+        // When the style is already loaded the source exists; rebuild its shape
+        // so filtered-out venues disappear (matching RN). If the style hasn't
+        // finished loading yet, didFinishLoading will build from these venues.
+        if let source = context.coordinator.shapeSource {
+            source.shape = MLNShapeCollectionFeature(shapes: makePointFeatures(venues))
+        }
     }
 
     // MARK: Coordinator
 
-    /// MapLibre map delegate. Empty for this PR — the next PR adds the pin
-    /// layers in `mapView(_:didFinishLoading:)` and the feature tap handler.
-    final class Coordinator: NSObject, MLNMapViewDelegate {}
+    /// MapLibre map delegate + tap target.
+    ///
+    /// Holds the live `venues` and `onVenueTap` (refreshed in `updateUIView`)
+    /// and a weak reference to the created shape source so the source can be
+    /// mutated when the filtered list changes. Delegate callbacks come from an
+    /// un-annotated ObjC framework, so they are `nonisolated` and hop back with
+    /// `MainActor.assumeIsolated` — the established `CLLocationManager` pattern.
+    final class Coordinator: NSObject, MLNMapViewDelegate {
+        var venues: [VenueListItem]
+        var onVenueTap: (String, String) -> Void
+        weak var shapeSource: MLNShapeSource?
+
+        init(venues: [VenueListItem], onVenueTap: @escaping (String, String) -> Void) {
+            self.venues = venues
+            self.onVenueTap = onVenueTap
+        }
+
+        // MARK: Layer setup
+
+        nonisolated func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+            MainActor.assumeIsolated {
+                let source = MLNShapeSource(
+                    identifier: sourceID,
+                    shape: MLNShapeCollectionFeature(shapes: makePointFeatures(venues)),
+                    options: nil
+                )
+                style.addSource(source)
+                shapeSource = source
+
+                // Layers added in stacking order: rings (bottom), dots, labels.
+                style.addLayer(Self.makeRingsLayer(source: source))
+                style.addLayer(Self.makeDotsLayer(source: source))
+                style.addLayer(Self.makeLabelsLayer(source: source))
+            }
+        }
+
+        /// White halo behind each dot. Constant radius/colour/opacity.
+        private static func makeRingsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
+            let layer = MLNCircleStyleLayer(identifier: "venue-rings", source: source)
+            layer.circleRadius = NSExpression(forConstantValue: 13)
+            layer.circleColor = NSExpression(forConstantValue: UIColor.white)
+            layer.circleOpacity = NSExpression(forConstantValue: 0.9)
+            return layer
+        }
+
+        /// The coloured dot. Data-driven: green (#00C853) when `dedicated == 1`,
+        /// else multi-sport blue (#1565C0).
+        private static func makeDotsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
+            let layer = MLNCircleStyleLayer(identifier: "venue-dots", source: source)
+            layer.circleRadius = NSExpression(forConstantValue: 9)
+            let green = UIColor(red: 0x00 / 255.0, green: 0xC8 / 255.0, blue: 0x53 / 255.0, alpha: 1)
+            let blue = UIColor(red: 0x15 / 255.0, green: 0x65 / 255.0, blue: 0xC0 / 255.0, alpha: 1)
+            layer.circleColor = NSExpression(
+                format: "MGL_MATCH(dedicated, 1, %@, %@)", green, blue
+            )
+            return layer
+        }
+
+        /// First-letter white label centred on each pin, always shown.
+        private static func makeLabelsLayer(source: MLNShapeSource) -> MLNSymbolStyleLayer {
+            let layer = MLNSymbolStyleLayer(identifier: "venue-labels", source: source)
+            layer.text = NSExpression(forKeyPath: "letter")
+            layer.textFontSize = NSExpression(forConstantValue: 11)
+            layer.textColor = NSExpression(forConstantValue: UIColor.white)
+            layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+            return layer
+        }
+
+        // MARK: Tap handling
+
+        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            MainActor.assumeIsolated {
+                guard let mapView = gesture.view as? MLNMapView else { return }
+                let point = gesture.location(in: mapView)
+                let features = mapView.visibleFeatures(
+                    at: point,
+                    styleLayerIdentifiers: ["venue-dots", "venue-rings"]
+                )
+                guard let feature = features.first,
+                      let id = feature.attribute(forKey: "id") as? String,
+                      let name = feature.attribute(forKey: "name") as? String
+                else { return }
+                onVenueTap(id, name)
+            }
+        }
+    }
 }

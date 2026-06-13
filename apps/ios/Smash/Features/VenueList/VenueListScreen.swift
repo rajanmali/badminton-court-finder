@@ -19,6 +19,12 @@ struct VenueListScreen: View {
     @State private var model = VenueListModel()
     @Environment(\.appEnvironment) private var env
 
+    /// Called when a venue is selected (a map pin tap). Forwards id + name to
+    /// the host so it can push the detail onto the navigation path. Defaults to
+    /// a no-op for previews. The `.list` branch still pushes via
+    /// `NavigationLink(value:)`.
+    var onSelectVenue: (String, String) -> Void = { _, _ in }
+
     var body: some View {
         content
             .navigationTitle("Smash — Find a Court")
@@ -49,7 +55,7 @@ struct VenueListScreen: View {
             }
 
         case .loaded:
-            LoadedBody(model: model)
+            LoadedBody(model: model, onSelectVenue: onSelectVenue)
         }
     }
 }
@@ -66,6 +72,9 @@ struct VenueListScreen: View {
 private struct LoadedBody: View {
     @Bindable var model: VenueListModel
 
+    /// Forwarded to the map so a pin tap can push the venue detail.
+    let onSelectVenue: (String, String) -> Void
+
     var body: some View {
         VStack(spacing: 0) {
             // Order matches RN's VenueListScreen.tsx: ViewToggle, then FilterBar,
@@ -79,8 +88,12 @@ private struct LoadedBody: View {
             case .list:
                 listContent
             case .map:
-                VenueMapView(userCoords: model.userCoords)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VenueMapView(
+                    venues: model.displayedVenues,
+                    userCoords: model.userCoords,
+                    onVenueTap: onSelectVenue
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
