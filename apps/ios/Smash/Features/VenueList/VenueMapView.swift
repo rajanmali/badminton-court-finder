@@ -190,8 +190,16 @@ struct VenueMapRepresentable: UIViewRepresentable {
             layer.circleRadius = NSExpression(forConstantValue: 9)
             let green = UIColor(red: 0x00 / 255.0, green: 0xC8 / 255.0, blue: 0x53 / 255.0, alpha: 1)
             let blue = UIColor(red: 0x15 / 255.0, green: 0x65 / 255.0, blue: 0xC0 / 255.0, alpha: 1)
+            // Data-driven match on the `dedicated` attribute (1 → green, else blue).
+            // Built with MapLibre's typed match initializer rather than an
+            // NSExpression(format:) string: MapLibre 6.x renamed the MGL_* custom
+            // expression functions to MLN_*, so the old "MGL_MATCH(...)" format
+            // string is unknown to the parser and throws at style-load time. The
+            // typed initializer avoids the string parser entirely.
             layer.circleColor = NSExpression(
-                format: "MGL_MATCH(dedicated, 1, %@, %@)", green, blue
+                forMLNMatchingKey: NSExpression(forKeyPath: "dedicated"),
+                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: green)],
+                default: NSExpression(forConstantValue: blue)
             )
             return layer
         }
