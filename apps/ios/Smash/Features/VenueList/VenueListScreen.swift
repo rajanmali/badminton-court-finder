@@ -68,21 +68,35 @@ private struct LoadedBody: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Order matches RN's VenueListScreen.tsx: ViewToggle, then FilterBar,
+            // then the list/map content.
+            ViewToggle(mode: $model.viewMode)
             FilterBar(
                 filters: $model.filters,
                 locationDenied: model.locationDenied
             )
-            if model.displayedVenues.isEmpty {
-                ContentUnavailableView(
-                    "No venues match your filters.",
-                    systemImage: "magnifyingglass"
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List(model.displayedVenues) { venue in
-                    NavigationLink(value: Route.venueDetail(id: venue.id, name: venue.name)) {
-                        VenueRow(venue: venue)
-                    }
+            switch model.viewMode {
+            case .list:
+                listContent
+            case .map:
+                VenueMapView(userCoords: model.userCoords)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var listContent: some View {
+        if model.displayedVenues.isEmpty {
+            ContentUnavailableView(
+                "No venues match your filters.",
+                systemImage: "magnifyingglass"
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List(model.displayedVenues) { venue in
+                NavigationLink(value: Route.venueDetail(id: venue.id, name: venue.name)) {
+                    VenueRow(venue: venue)
                 }
             }
         }
