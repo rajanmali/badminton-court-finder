@@ -1,0 +1,20 @@
+// Shared.xcconfig
+// Common build settings shared across configurations.
+// Most build settings live in project.yml; this file exists primarily to
+// pull in the gitignored Secrets.xcconfig and provide safe fallback values.
+//
+// NOTE on the xcconfig URL gotcha: in xcconfig files `//` begins a comment,
+// so a literal "http://..." would be truncated to "http:". The empty
+// substitution `$()` inserted between the two slashes prevents that. Always
+// use this trick for any URL value in an xcconfig file.
+
+// Fallback defaults. Real values come from Secrets.xcconfig (copied from
+// Secrets.example.xcconfig). The optional include below overrides these when
+// the file is present.
+API_BASE_URL = http:/$()/localhost:3000/api/v1
+MAPTILER_API_KEY =
+SENTRY_DSN =
+
+// Optional include so a missing Secrets.xcconfig doesn't hard-fail before the
+// copy step. Our CI/local flow always provides it.
+#include? "Secrets.xcconfig"

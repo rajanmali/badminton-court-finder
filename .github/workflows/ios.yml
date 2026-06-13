@@ -1,0 +1,117 @@
+# iOS build & test.
+#
+# This workflow is PATH-FILTERED to apps/ios/** to save scarce macOS runner
+# minutes — it only runs when iOS code (or this workflow) changes.
+#
+# GOTCHA if this ever becomes a *required* status check: a path-filtered
+# workflow simply does not run on PRs that don't touch its paths, so a required
+# check named "build-test" would stay "Expected — waiting for status" forever
+# and deadlock every non-iOS PR. If you make this required, add an inverse
+# (paths-ignore) "shadow" no-op job with the SAME job name so non-iOS PRs get a
+# passing status for the same check name. Until then, keep it non-required.
+
+name: iOS
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "apps/ios/**"
+      - ".github/workflows/ios.yml"
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build-test
+    # Prefer macos-26 (Xcode 26 / iOS 26 SDK). Fall back handled at runtime by
+    # selecting the newest installed Xcode below.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # Surface what the runner actually has so failures are diagnosable.
+      - name: Inspect runner toolchain
+        run: |
+          echo "== Installed Xcodes =="
+          ls /Applications | grep -i Xcode || true
+          echo "== Simulator runtimes =="
+          xcrun simctl list runtimes || true
+          echo "== Available devices =="
+          xcrun simctl list devices available || true
+
+      # Select the newest Xcode that ships the iOS 26 SDK. Detect dynamically
+      # rather than hardcoding a point version.
+      - name: Select newest Xcode with iOS 26 SDK
+        run: |
+          set -euo pipefail
+          best=""
+          for app in $(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V); do
+            dev="$app/Contents/Developer"
+            if "$dev/usr/bin/xcodebuild" -showsdks 2>/dev/null | grep -qiE 'iphoneos26'; then
+              best="$dev"
+            fi
+          done
+          if [ -z "$best" ]; then
+            echo "::error::No installed Xcode provides the iOS 26 SDK. Available SDKs:"
+            xcodebuild -showsdks || true
+            exit 1
+          fi
+          echo "Selected DEVELOPER_DIR=$best"
+          sudo xcode-select -s "$best"
+          echo "DEVELOPER_DIR=$best" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i ios || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Provide Secrets.xcconfig (placeholders are fine for build/test)
+        run: cp apps/ios/Config/Secrets.example.xcconfig apps/ios/Config/Secrets.xcconfig
+
+      # No SPM deps yet, but wire the cache for later PRs (MapLibre/Sentry).
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: apps/ios/.spm-cache
+          key: spm-${{ runner.os }}-${{ hashFiles('apps/ios/project.yml') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Generate Xcode project
+        working-directory: apps/ios
+        run: xcodegen generate
+
+      # Pick an iPhone simulator that actually exists on the runner: prefer
+      # "iPhone 17", otherwise fall back to the newest available iPhone.
+      - name: Choose simulator destination
+        working-directory: apps/ios
+        run: |
+          set -euo pipefail
+          if xcrun simctl list devices available | grep -q "iPhone 17 ("; then
+            sim="iPhone 17"
+          else
+            sim=$(xcrun simctl list devices available \
+              | grep -oE 'iPhone [0-9A-Za-z ]+ \(' \
+              | sed -E 's/ \($//' \
+              | sort -V | tail -1)
+          fi
+          if [ -z "${sim:-}" ]; then
+            echo "::error::No iPhone simulator available on this runner."
+            xcrun simctl list devices available || true
+            exit 1
+          fi
+          echo "Using simulator: $sim"
+          echo "SIM_NAME=$sim" >> "$GITHUB_ENV"
+
+      - name: Build & test
+        working-directory: apps/ios
+        run: |
+          xcodebuild test \
+            -project Smash.xcodeproj \
+            -scheme Smash \
+            -destination "platform=iOS Simulator,name=${SIM_NAME}" \
+            -clonedSourcePackagesDirPath .spm-cache \
+            CODE_SIGNING_ALLOWED=NO

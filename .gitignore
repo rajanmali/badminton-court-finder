@@ -37,6 +37,10 @@ Thumbs.db
 .idea/
 *.swp
 
+# Claude Code local settings (project-level CLAUDE.md is tracked; local settings are not)
+.claude/settings.json
+.claude/settings.local.json
+
 # Testing
 coverage/
 

@@ -19,20 +19,74 @@ feature/   fix/   chore/   docs/   refactor/   test/   style/   perf/
 
 **Releases** (`release/vX.Y.Z`) branch off `dev` and merge into `main` via PR.
 
+### Commit discipline (required on every branch)
+
+Commit after each logical unit of work — not just at the end of a session. Each commit must:
+
+- **Be atomic** — one concern per commit. Don't bundle a DB migration with a UI change.
+- **Use conventional commit format**: `type(scope): description`
+  - `feat(api): add GET /venues endpoint`
+  - `chore(monorepo): init Turborepo with npm workspaces`
+  - `fix(mobile): correct distance filter haversine calculation`
+  - `docs(adr): add ADR-0008 NestJS API from day one`
+- **Have a meaningful message** — describe *what changed and why*, not just "update files" or "WIP".
+- **Pass at minimum**: no TypeScript errors, no lint errors. Don't commit broken state.
+
+Commit cadence examples:
+- Scaffold a new service → one commit per service (`chore(api): scaffold NestJS service`, `chore(mobile): init Expo app shell`)
+- Add an endpoint → one commit per endpoint + one for its tests
+- Update a doc or ADR → one commit per doc
+
+Never batch unrelated changes. Never commit with message "misc" or "wip" to a shared branch.
+
+### PR process (required for every merge)
+
+When opening a PR, always populate:
+- **Title** — conventional commit format: `type: short description` (e.g. `feat: venue list screen`)
+- **Body** — `## Summary` (bullet points), `## Test plan` (checklist)
+- **Labels** — at least one of: `feature`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`
+- **Assignee** — always assign to `rajanmali`
+
+After opening the PR, immediately:
+1. Poll CI status with `gh pr checks <number> --watch` until all checks complete.
+2. If all checks pass → merge automatically with `gh pr merge <number> --squash --delete-branch`.
+3. If any check fails → report the failure, do not merge.
+
+For orchestrated multi-agent work, the orchestrator reviews the PR diff against the spec before merging (review-then-merge replaces auto-merge; solo/direct work keeps auto-merge on green). See `docs/agents/orchestration.md`.
+
+For hotfixes only: after merging into `main`, open a second PR from the same `hotfix/` branch into `dev` and repeat the process.
+
+### Release process
+
+Versioning follows **semver**: `MAJOR.MINOR.PATCH`
+- `PATCH` — bug fixes only
+- `MINOR` — new backwards-compatible features
+- `MAJOR` — breaking changes
+
+Steps to cut a release:
+
+1. **Branch** — create `release/vX.Y.Z` off `dev`.
+2. **Prep commit** — bump any version references (e.g. `app.json`, `package.json`) and update `CHANGELOG.md` if maintained. Commit as `chore: bump version to vX.Y.Z`.
+3. **PR to `main`** — open with label `release`, assignee `rajanmali`. Follow the standard PR process (CI must pass before merge). Use squash merge.
+4. **Tag and publish** — after the PR merges into `main`, run:
+   ```bash
+   gh release create vX.Y.Z --target main --title "vX.Y.Z" --generate-notes
+   ```
+   GitHub will auto-categorise the release notes from PR labels using `.github/release.yml`.
+5. **Sync back to `dev`** — open a PR from `main` → `dev` (title: `chore: sync vX.Y.Z release back to dev`), label `chore`, and merge it. This keeps `dev` aware of the exact release commit.
+
+The `release` label must exist on GitHub (create with `gh label create release --color 0052cc --description "Release"` if missing).
+
 ## Current status
 
-**No code has been written yet.** All planning documents live in `docs/`. Implementation begins at Phase 1 (see `docs/06-roadmap-and-milestones.md`). Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what still needs owner confirmation before scaffolding.
+The **native iOS Phase 1 app (Swift/SwiftUI) is implemented on `dev`**: venue list, map, detail, filters, and deep links against the NestJS API/Supabase. The React Native/Expo app and shared mobile packages have been removed (ADR-0010). Planning documents remain in `docs/`. Read `docs/00-PROJECT-HANDOFF.md` first — it summarizes what's been done, what decisions are locked, and what's next (Phase 2: live availability).
 
-## Planned monorepo structure
+## Monorepo structure
 
 ```
 badminton-finder/
 ├── apps/
-│   ├── mobile/          # React Native app (Expo managed workflow)
-│   └── widget/          # Shared widget logic if separated
-├── packages/
-│   ├── api-client/      # Typed API client, shared types
-│   └── ui/              # Shared design tokens/components
+│   └── ios/             # Native iOS app (Swift/SwiftUI, XcodeGen)
 ├── services/
 │   ├── api/             # Backend API (NestJS/TypeScript)
 │   └── sync-worker/     # Availability polling/sync jobs
@@ -46,16 +100,15 @@ Conventional commits (`feat:`, `fix:`, `chore:`, etc.) on all branches.
 
 | Layer | Technology |
 |---|---|
-| Mobile | React Native, Expo managed workflow |
-| Navigation | React Navigation |
-| Local storage (widget) | MMKV or `expo-sqlite` |
+| Mobile | Native iOS (Swift/SwiftUI, XcodeGen) — see ADR-0010 |
+| Maps | MapLibre Native iOS SDK + Maptiler tiles (OSM data) — see ADR-0009 |
 | Backend API | NestJS (TypeScript) |
 | Database | Supabase (Postgres) |
 | CMS | Sanity (editorial metadata only; syncs into Postgres on publish) |
 | Cache | Redis / Upstash (availability snapshots, short TTL) |
 | Sync worker | Supabase Edge Functions (cron) or `node-cron` on Railway/Render |
-| Mobile builds | EAS Build (Expo) |
-| Error tracking | Sentry (mobile + backend) |
+| Mobile builds | Xcode / TestFlight (EAS decommissioned) |
+| Error tracking | Sentry (sentry-cocoa on iOS; backend) |
 | Analytics | PostHog |
 
 ## Architecture: the normalization adapter pattern (ADR-003)
@@ -74,8 +127,8 @@ The normalized output lands in a single `availability_snapshots` table. The mobi
 ## Key architectural constraints
 
 - **No scraping** (ADR-002): Live availability comes only from explicit venue partnerships (iCal feeds, webhooks). Sport Logic/intennis-style platforms block robots.txt. This is a firm decision — do not revisit without a strong reason.
-- **Android widget cannot poll live**: The widget reads from a locally cached store (MMKV/SQLite) that the app syncs via WorkManager. The `GET /widget/summary` endpoint is optimized for minimal payload since it's fetched by a background task, not interactively.
-- **iOS widget requires native Swift** (ADR-004): WidgetKit is unavoidable — it cannot be done in React Native. iOS widget is Phase 4, after Android widget ships in Phase 3.
+- **Android deferred** (ADR-0010): Android development begins only after the iOS app shows traction. The Phase 3 Android widget is deferred accordingly.
+- **iOS widget requires native Swift** (ADR-004): WidgetKit is unavoidable. iOS widget is Phase 4 — a natural extension of the `apps/ios` Swift codebase via a shared app group container.
 - **All times stored UTC**, converted to `Australia/Sydney` at the API/app layer. Daylight saving transitions need test coverage.
 - **Prices stored as cents** (integers), not floats.
 
@@ -97,19 +150,14 @@ Five tables in Supabase Postgres (full schema in `docs/02-technical-design-doc.m
 
 ## Open decisions — confirm with owner before implementing
 
-1. **State management**: Architecture doc suggests React Query (TanStack Query) for server state. Owner has deep Redux Toolkit/RTK Query background and wants to confirm this before the data layer is scaffolded. Do not hardcode either choice into early boilerplate.
-2. **Branding/design system**: Possibly reusing owner's existing UIForge design system, possibly a fresh design. Focus on functional UI until this is confirmed.
-3. **App/package name and bundle ID**: Not yet chosen. Required before finalizing `app.json`/Expo config.
-4. **Accounts**: GitHub repo, Supabase project, Expo/EAS account, Google Maps/Places API key — none exist yet. Setting these up is part of Phase 0/1.
+1. ~~**State management**~~ — **Resolved:** Swift URLSession client with retry-2 logic; SwiftUI `NavigationStack` model lifetime for list state. No React Query equivalent. See ADR-0007/ADR-0010.
+2. ~~**Branding/design system**~~ — **Resolved:** fresh design system for Smash; tokens live in `apps/ios/Smash/DesignSystem/Tokens.swift`. Owner to supply expanded tokens/components as needed.
+3. ~~**App/package name and bundle ID**~~ — **Resolved: "Smash", bundle ID `com.rajanmali.smash`.**
+4. ~~**Accounts**~~ — **Resolved:** Supabase project `sqqymvrqnkypofqlrnjw` active and wired; Maptiler account active and wired (ADR-0009). **Expo/EAS decommissioned.** Google Maps/Places not used — MapLibre/Maptiler per ADR-0009. Apple Developer account active (Xcode/TestFlight). Google Play Console confirmed but inactive until Android work begins.
 
-## Phase 1 implementation sequence
+## Phase 1 — done
 
-1. Confirm open decisions above (especially state management — affects data layer structure).
-2. Scaffold monorepo, CI skeleton, empty Expo app shell with navigation.
-3. Set up Supabase: create `venues`, `rate_cards`, `opening_hours` tables (skip `availability_partnerships`/`availability_snapshots` until Phase 2).
-4. Seed database from `docs/venues-seed-data.md`.
-5. Build venue list (map view) + detail screens against seeded data.
-6. Wire up deep links to venue booking pages.
+Phase 1 (static directory) is implemented: native iOS app (Swift/SwiftUI) with venue list, map, detail, filters, and deep links against the NestJS API/Supabase. Next is Phase 2 (live availability). See `docs/06-roadmap-and-milestones.md`.
 
 Venue outreach (sending emails in `docs/venue-outreach-plan.md`) runs in parallel and has zero dependency on any of the above.
 
@@ -119,6 +167,24 @@ Venue outreach (sending emails in `docs/venue-outreach-plan.md`) runs in paralle
 - **Integration tests**: API endpoints against a real test database (Supabase local dev or Dockerized Postgres). Do not mock the database.
 - **E2E** (Detox or Maestro): 2-3 critical paths only (search → venue detail → deep link to booking page).
 - **Widget testing**: manual device testing required; WorkManager timing varies by OEM (Samsung vs. Pixel battery optimization).
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`github.com/rajanmali/badminton-court-finder`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo. Read `CONTEXT.md` at the root and `docs/adr/` before working in any area. See `docs/agents/domain.md`.
+
+### Agent orchestration
+
+Multi-agent work (orchestrator + per-PR implementation subagents) follows the loop in `docs/agents/orchestration.md`.
 
 ## iCal availability computation note
 
