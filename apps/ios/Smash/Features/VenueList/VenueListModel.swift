@@ -28,14 +28,30 @@ final class VenueListModel {
     /// Active filters. Defaults to `.default`; PR 8 makes these live.
     var filters: FilterState = .default
 
-    /// The user's coordinates, when known. PR 8 populates this from the
-    /// location service.
+    /// The user's coordinates, when known. Populated by ``loadLocation(using:)``.
     var userCoords: UserCoords? = nil
+
+    /// `true` when location permission was denied or restricted.
+    /// Drives the distance-chip disabled state and the orange hint in FilterBar.
+    var locationDenied: Bool = false
 
     /// Venues to render: filtered + sorted when loaded, empty otherwise.
     var displayedVenues: [VenueListItem] {
         guard case let .loaded(venues) = state else { return [] }
         return applyFilters(venues, filters, userCoords)
+    }
+
+    /// Requests the user's location via the injected service and folds the
+    /// outcome into ``userCoords`` and ``locationDenied``.
+    ///
+    /// Uses `LocationOutcome.locationState` — the same helper that the
+    /// `LocationOutcomeMappingTests` exercise — so outcome → model mapping
+    /// stays in one place.
+    func loadLocation(using service: any LocationService) async {
+        let outcome = await service.requestLocation()
+        let state = outcome.locationState
+        self.userCoords = state.coords
+        self.locationDenied = state.permissionDenied
     }
 
     /// Fetches venues via the injected repository and folds the result into
