@@ -12,6 +12,8 @@ at the end.
 
 ## Phase 1: Static directory (MVP)
 
+> **Note (ADR-0010):** The mobile app is being rewritten as a native iOS Swift/SwiftUI app (`apps/ios/`). Android, including the Phase 3 Android widget, is deferred until traction. iOS app functionality is unchanged in scope.
+
 **Goal:** A real app on your phone showing all ~20 Sydney venues with rates,
 hours, location, and deep links — no live availability yet.
 
