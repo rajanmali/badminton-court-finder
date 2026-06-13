@@ -52,6 +52,8 @@ After opening the PR, immediately:
 2. If all checks pass → merge automatically with `gh pr merge <number> --squash --delete-branch`.
 3. If any check fails → report the failure, do not merge.
 
+For orchestrated multi-agent work, the orchestrator reviews the PR diff against the spec before merging (review-then-merge replaces auto-merge; solo/direct work keeps auto-merge on green). See `docs/agents/orchestration.md`.
+
 For hotfixes only: after merging into `main`, open a second PR from the same `hotfix/` branch into `dev` and repeat the process.
 
 ### Release process
@@ -190,6 +192,10 @@ Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 ### Domain docs
 
 Single-context repo. Read `CONTEXT.md` at the root and `docs/adr/` before working in any area. See `docs/agents/domain.md`.
+
+### Agent orchestration
+
+Multi-agent work (orchestrator + per-PR implementation subagents) follows the loop in `docs/agents/orchestration.md`.
 
 ## iCal availability computation note
 
