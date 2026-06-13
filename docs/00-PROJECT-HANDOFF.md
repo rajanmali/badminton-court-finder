@@ -1,20 +1,22 @@
-# Project Handoff: Badminton Court Finder (Sydney)
+# Project Handoff: Smash — Sydney Badminton Finder
 
-**Status as of:** 12 June 2026
-**Stage:** Planning complete. No code written yet. This document is the entry
-point for picking up implementation work.
+**Status as of:** 14 June 2026
+**Stage:** Native iOS Phase 1 app implemented on `dev`. This document is the
+entry point for picking up Phase 2 work.
 
 ## 1. What this project is
 
-A cross-platform mobile app (React Native/Expo, targeting Android + iOS, with
-home screen widget support) that helps Sydney badminton players find venues,
-compare rates/hours, and — where partnerships allow — see live court
-availability, with deep links to each venue's own booking page. No in-app
+A native iOS app (Swift/SwiftUI, iOS-first) that helps Sydney badminton players
+find venues, compare rates/hours, and — where partnerships allow — see live
+court availability, with deep links to each venue's own booking page. No in-app
 booking/payments in v1.
+
+Android is deferred until the product shows traction; if built later it will be
+a separate native app, not a shared codebase.
 
 Read `01-PRD.md` first for full scope, goals, and non-goals.
 
-## 2. What's been done so far (all in planning — nothing built)
+## 2. What's been done so far
 
 - **Feasibility research**: surveyed the Sydney badminton venue landscape,
   identified ~5 different booking platforms in use (Sport Logic/intennis-style,
@@ -36,42 +38,51 @@ Read `01-PRD.md` first for full scope, goals, and non-goals.
 - **Venue data collected**: rates, hours, court counts gathered for several
   venues (see `venues-seed-data.md` — this is the data to seed the database
   with in Phase 1).
+- **Phase 1 natively implemented**: venue list, map view with pins, venue detail
+  screen, filters (distance/price/dedicated), and deep links to booking pages —
+  all consuming the NestJS API (`services/api`) backed by Supabase. The React
+  Native/Expo app (`apps/mobile`) and the shared packages (`packages/api-client`,
+  `packages/ui`) were removed after native parity was reached (ADR-0010). Design
+  tokens now live in `apps/ios/Smash/DesignSystem/Tokens.swift`.
 
 ## 3. Key decisions already made (don't re-litigate without reason)
 
 - **No scraping** of venue booking platforms — ADR-002. Live availability is
   partnership-gated only.
-- **Monorepo**, trunk-based development, RN/Expo — ADR-001, ADR-006.
+- **Monorepo**, trunk-based development — ADR-006.
+- **Native iOS rewrite (Swift/SwiftUI)** — ADR-0010, supersedes ADR-0001
+  (RN/Expo). Android is deferred until traction.
 - **Normalization adapter pattern** for availability data — ADR-003. Critical:
   the API/app/widget must never need platform-specific knowledge.
-- **Android widget first**, iOS WidgetKit (native Swift) deferred to its own
-  phase — ADR-004.
+- **iOS WidgetKit extension (Phase 4)** — extends the native Swift codebase.
+  Android widget deferred (ADR-004). The Android-widget-first ordering no longer
+  applies.
 - **Supabase (Postgres) + Sanity CMS** as data stores — ADR-005.
+- **MapLibre Native iOS + Maptiler** for maps — Google Maps not used (ADR-0009).
 
-## 4. Open decisions (NOT yet made — flag to project owner before assuming)
+## 4. Accounts and services
 
-- ~~**State management**~~ — **Resolved: React Query (TanStack Query).** See ADR-0007.
-- ~~**Branding/design direction**~~ — **Resolved: fresh design system for Smash.** Owner will supply design tokens after initial scaffolding. `packages/ui` starts minimal.
-- ~~**App name, package name / bundle ID**~~ — **Resolved: "Smash", bundle ID `com.rajanmali.smash`.**
-- **Accounts**: GitHub repo, Supabase project, Expo/EAS account, Google
-  Maps/Places API key — none of these exist yet. Setting these up is part of
-  Phase 0/1 (see roadmap), not assumed to be pre-existing.
+- **Supabase**: project `sqqymvrqnkypofqlrnjw` — active, wired to the API.
+- **Maptiler**: account active, API key wired into `apps/ios` via
+  `Config/Secrets.xcconfig` (gitignored).
+- **Expo/EAS**: **decommissioned** — no longer used.
+- **Google Maps/Places**: **not used** — MapLibre/Maptiler per ADR-0009.
+- **Apple Developer account**: confirmed active; builds via Xcode / TestFlight.
+- **Google Play Console**: confirmed; not active until Android work begins.
 
-## 5. Suggested first steps for implementation
+## 5. What's next (Phase 2)
 
-Per `06-roadmap-and-milestones.md`, Phase 1 (static directory) is the starting
-point:
+Phase 1 (static directory) is done. The next milestone is Phase 2: live
+availability for 2–3 partnered venues.
 
-1. Confirm the open decisions in section 4 above with the project owner before
-   scaffolding (state management especially affects the data layer structure).
-2. Scaffold monorepo per structure in `engineering-approach-and-architecture.md`
-   section 3.
-3. Set up Supabase project, create schema per `02-technical-design-doc.md`
-   section 2 (`venues`, `rate_cards`, `opening_hours` tables — skip
-   `availability_partnerships`/`availability_snapshots` until Phase 2).
-4. Seed database using `venues-seed-data.md`.
-5. Build venue list (map) + detail screens in Expo app against seeded data.
-6. Set up basic CI (lint, typecheck, test) per ADR-006.
+1. Finalise at least one venue partnership (iCal feed or webhook).
+2. Create `availability_partnerships` and `availability_snapshots` tables in
+   Supabase (schema in `02-technical-design-doc.md`).
+3. Build the first availability adapter end-to-end.
+4. Wire up the sync worker and `GET /venues/:id/availability` endpoint.
+5. Update the iOS app to show the availability indicator for partnered venues.
+
+Outreach is in progress in parallel and shouldn't block other work.
 
 ## 6. Important constraints to keep in mind throughout
 
