@@ -15,6 +15,14 @@ struct FilterState: Sendable, Equatable {
     static let `default` = FilterState(radiusKm: nil, maxPriceCents: nil, dedicatedOnly: false)
 }
 
+/// Whether any filter is engaged (distance, max price, or dedicated-only).
+/// Drives the red "active filters" dot on the Map tab's Filters pill.
+/// Equivalent to `filters != .default`, expressed component-wise so the intent
+/// reads directly and so it is unit-testable in isolation.
+func filtersAreActive(_ filters: FilterState) -> Bool {
+    filters.radiusKm != nil || filters.maxPriceCents != nil || filters.dedicatedOnly
+}
+
 // MARK: - VenueListItem immutable rebuild helper
 
 extension VenueListItem {

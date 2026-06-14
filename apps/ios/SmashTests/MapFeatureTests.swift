@@ -54,6 +54,21 @@ struct MapFeatureTests {
         #expect(attrs["letter"] as? String == "")
     }
 
+    @Test func selectedAttributeIsOneForMatchingID() {
+        let attrs = pinAttributes(for: makeVenue(id: "sel", name: "Selected"), selectedID: "sel")
+        #expect(attrs["selected"] as? Int == 1)
+    }
+
+    @Test func selectedAttributeIsZeroForNonMatchingID() {
+        let attrs = pinAttributes(for: makeVenue(id: "a", name: "Alpha"), selectedID: "sel")
+        #expect(attrs["selected"] as? Int == 0)
+    }
+
+    @Test func selectedAttributeIsZeroWhenNothingSelected() {
+        let attrs = pinAttributes(for: makeVenue(id: "a", name: "Alpha"), selectedID: nil)
+        #expect(attrs["selected"] as? Int == 0)
+    }
+
     @Test func makePointFeaturesProducesOnePerVenueWithCoordinate() {
         let venues = [
             makeVenue(id: "a", name: "Alpha", lat: -33.5, lng: 151.1, dedicated: true),
