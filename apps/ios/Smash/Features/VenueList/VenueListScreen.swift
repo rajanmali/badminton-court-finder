@@ -1,41 +1,30 @@
 import SwiftUI
 
-/// The venue list screen. Ports `VenueListScreen.tsx`.
+/// The List tab. Ports `VenueListScreen.tsx`'s list branch.
 ///
-/// Loads venues and requests location concurrently on appear via the injected
-/// ``AppEnvironment``. When data is loaded, renders a ``FilterBar`` above the
-/// venue list (or the empty-state view) — matching the RN behaviour of showing
-/// filters only after the initial load completes.
+/// Renders only the list experience — the loading / error / empty states plus
+/// the ``FilterBar`` above a card list. The List/Map switch moved to the
+/// floating ``TabBar`` (see ``RootTabView``), and the shared ``VenueListModel``
+/// is now owned by ``RootTabView`` and passed in here; this screen no longer
+/// creates the model or runs the initial load.
 ///
 /// ## @Bindable pattern
 ///
-/// `model` lives in `@State`. SwiftUI 5.1+ allows using `$state.property`
-/// directly when the wrapped value is `@Observable`, but the most reliable
-/// cross-version idiom is to extract a `Bindable` wrapper once in a helper
-/// view that receives the model as `@Bindable`. Here we keep it simple:
-/// the loaded body is extracted into `LoadedBody`, which holds the model
-/// as `@Bindable var model` and creates `$model.filters` for `FilterBar`.
+/// The model is created and owned by ``RootTabView``'s `@State`. This screen
+/// holds a non-owning `@Bindable` reference so it can derive `$model.filters`
+/// for ``FilterBar`` without changing ownership — the documented Apple pattern
+/// for passing an `@Observable` down the hierarchy.
 struct VenueListScreen: View {
-    @State private var model = VenueListModel()
-    @Environment(\.appEnvironment) private var env
+    @Bindable var model: VenueListModel
 
-    /// Called when a venue is selected (a map pin tap). Forwards id + name to
-    /// the host so it can push the detail onto the navigation path. Defaults to
-    /// a no-op for previews. The `.list` branch still pushes via
-    /// `NavigationLink(value:)`.
+    /// Called when a venue is selected (a card tap routed through the host, or a
+    /// programmatic push). List rows also push via `NavigationLink(value:)`.
     var onSelectVenue: (String, String) -> Void = { _, _ in }
 
     var body: some View {
         content
             .navigationTitle("Smash — Find a Court")
             .navigationBarTitleDisplayMode(.inline)
-            .task {
-                // Run venue load and location request concurrently — neither
-                // depends on the other and displayedVenues reacts to both.
-                async let venueLoad: Void = model.load(using: env.venueRepository)
-                async let locationLoad: Void = model.loadLocation(using: env.locationService)
-                _ = await (venueLoad, locationLoad)
-            }
     }
 
     @ViewBuilder
@@ -44,7 +33,7 @@ struct VenueListScreen: View {
         case .loading:
             ProgressView()
                 .controlSize(.large)
-                .tint(.smashPrimary)
+                .tint(.green)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case let .failed(message):
@@ -55,46 +44,22 @@ struct VenueListScreen: View {
             }
 
         case .loaded:
-            LoadedBody(model: model, onSelectVenue: onSelectVenue)
+            loadedBody
         }
     }
-}
 
-// MARK: - LoadedBody
+    // MARK: - Loaded body
 
-/// Renders the FilterBar + list (or empty state) once data is available.
-///
-/// Receiving the model as `@Bindable var model` is the documented Apple pattern
-/// for deriving bindings from an `@Observable` instance that was created and
-/// owned by a parent's `@State`. The parent holds the authoritative instance;
-/// this child view simply holds a non-owning `Bindable` wrapper, giving us
-/// `$model.filters` without changing ownership.
-private struct LoadedBody: View {
-    @Bindable var model: VenueListModel
-
-    /// Forwarded to the map so a pin tap can push the venue detail.
-    let onSelectVenue: (String, String) -> Void
-
-    var body: some View {
+    /// FilterBar + card list (or empty state). Bottom content padding clears the
+    /// floating tab bar so the last card isn't hidden behind it.
+    @ViewBuilder
+    private var loadedBody: some View {
         VStack(spacing: 0) {
-            // Order matches RN's VenueListScreen.tsx: ViewToggle, then FilterBar,
-            // then the list/map content.
-            ViewToggle(mode: $model.viewMode)
             FilterBar(
                 filters: $model.filters,
                 locationDenied: model.locationDenied
             )
-            switch model.viewMode {
-            case .list:
-                listContent
-            case .map:
-                VenueMapView(
-                    venues: model.displayedVenues,
-                    userCoords: model.userCoords,
-                    onVenueTap: onSelectVenue
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            listContent
         }
     }
 
@@ -112,6 +77,9 @@ private struct LoadedBody: View {
                     VenueRow(venue: venue)
                 }
             }
+            // Clear the floating tab bar (floats ~26pt up + its own height) so
+            // the last row isn't obscured behind it.
+            .safeAreaPadding(.bottom, 96)
         }
     }
 }
