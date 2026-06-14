@@ -160,3 +160,23 @@ struct ApplyFiltersCombinedTests {
         #expect(!ids.contains("ded"))
     }
 }
+
+// MARK: - filtersAreActive (Map "active filters" red dot)
+
+struct FiltersAreActiveTests {
+    @Test func defaultIsInactive() {
+        #expect(filtersAreActive(.default) == false)
+    }
+
+    @Test func radiusMakesActive() {
+        #expect(filtersAreActive(FilterState(radiusKm: 5, maxPriceCents: nil, dedicatedOnly: false)))
+    }
+
+    @Test func maxPriceMakesActive() {
+        #expect(filtersAreActive(FilterState(radiusKm: nil, maxPriceCents: 3000, dedicatedOnly: false)))
+    }
+
+    @Test func dedicatedOnlyMakesActive() {
+        #expect(filtersAreActive(FilterState(radiusKm: nil, maxPriceCents: nil, dedicatedOnly: true)))
+    }
+}
