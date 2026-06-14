@@ -52,7 +52,7 @@ struct FilterBar: View {
                         ("20 km", 20),
                     ]
                     ForEach(options, id: \.0) { title, value in
-                        FilterChip(
+                        FilterBarChip(
                             title: title,
                             isActive: filters.radiusKm == value,
                             isDisabled: locationDenied && value != nil
@@ -86,7 +86,7 @@ struct FilterBar: View {
                         ("≤$40", 4000),
                     ]
                     ForEach(options, id: \.0) { title, value in
-                        FilterChip(
+                        FilterBarChip(
                             title: title,
                             isActive: filters.maxPriceCents == value,
                             isDisabled: false
@@ -107,7 +107,7 @@ struct FilterBar: View {
     }
 }
 
-// MARK: - FilterChip
+// MARK: - FilterBarChip
 
 /// A rounded-capsule button chip used in `FilterBar`.
 ///
@@ -115,7 +115,11 @@ struct FilterBar: View {
 /// - **Active**: `.smashPrimary` background, white text.
 /// - **Inactive**: white/surface background, `.smashBorder` stroke, dark text.
 /// - **Disabled**: light grey background, faint text, non-interactive.
-private struct FilterChip: View {
+///
+/// Note: this is the legacy filter chip local to `FilterBar`. The redesign's
+/// reusable `FilterChip` lives in `DesignSystem/Components.swift`; screens are
+/// rewired to it in a later redesign PR.
+private struct FilterBarChip: View {
     let title: String
     let isActive: Bool
     let isDisabled: Bool
