@@ -79,3 +79,26 @@ final class VenueListModel {
         return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }
+
+// MARK: - Preview / test seam
+
+extension VenueListModel {
+    /// Builds a model in a fixed ``LoadState`` with optional filters — for
+    /// SwiftUI previews and view-layer tests that need to render a specific
+    /// state without driving an async load.
+    ///
+    /// `state` stays `private(set)` for production callers (the only writers are
+    /// ``load(using:)``); this factory is the one sanctioned way to seed it
+    /// directly, keeping the invariant intact while making previews trivial.
+    static func preview(
+        state: LoadState,
+        filters: FilterState = .default,
+        locationDenied: Bool = false
+    ) -> VenueListModel {
+        let model = VenueListModel()
+        model.state = state
+        model.filters = filters
+        model.locationDenied = locationDenied
+        return model
+    }
+}
