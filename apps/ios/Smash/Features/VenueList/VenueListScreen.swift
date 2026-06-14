@@ -72,14 +72,28 @@ struct VenueListScreen: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(model.displayedVenues) { venue in
-                NavigationLink(value: Route.venueDetail(id: venue.id, name: venue.name)) {
-                    VenueRow(venue: venue)
+            // ScrollView + LazyVStack so the glass cards float on the page
+            // background without a List's white row chrome or cell separators.
+            // NavigationLink(value:) with .buttonStyle(.venueCard) routes press
+            // state into VenueCardButtonStyle, enabling the 0.96× spring scale.
+            ScrollView {
+                LazyVStack(spacing: Spacing.cardGap) {
+                    ForEach(model.displayedVenues) { venue in
+                        NavigationLink(
+                            value: Route.venueDetail(id: venue.id, name: venue.name)
+                        ) {
+                            VenueRow(venue: venue)
+                        }
+                        .buttonStyle(.venueCard)
+                    }
                 }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                // Clear the floating tab bar (floats ~26pt up + its own height)
+                // so the last card isn't obscured behind it.
+                .padding(.bottom, 88)
             }
-            // Clear the floating tab bar (floats ~26pt up + its own height) so
-            // the last row isn't obscured behind it.
-            .safeAreaPadding(.bottom, 96)
+            .scrollContentBackground(.hidden)
         }
     }
 }
