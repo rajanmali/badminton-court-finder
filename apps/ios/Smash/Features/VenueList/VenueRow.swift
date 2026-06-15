@@ -112,9 +112,13 @@ struct VenueRow: View {
                             .font(Typography.price)
                             .tracking(-1.0)
                             .foregroundStyle(Color.green)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                         Text("/hr")
                             .font(Typography.caption)
                             .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                 } else {
                     Text("Rates not\nlisted")

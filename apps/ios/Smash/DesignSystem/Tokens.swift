@@ -55,6 +55,11 @@ extension Color {
     /// Text / icon color used ON green fills (chip-on, btn-primary, badge-ded).
     /// Same in light & dark because it sits over a colored fill, not the page. #04190F
     static let onAccent   = Color(hex: 0x04190F)
+
+    // ── Warning ───────────────────────────────────────────────────
+    /// Amber warning accent — location-denied hint, attention states. #F57C00
+    /// Fixed (not dynamic): amber reads clearly on both light and dark backgrounds.
+    static let warning    = Color(hex: 0xF57C00)
 }
 
 // MARK: - Neutral colors (dynamic light/dark)
@@ -205,50 +210,3 @@ extension View {
     }
 }
 
-// MARK: - Deprecated legacy names
-// These repoint existing screens to the new palette.
-// Removed after each screen is migrated in later redesign PRs.
-
-extension Color {
-    /// Deprecated: use `.green` — removed after redesign migration.
-    @available(*, deprecated, renamed: "green")
-    static let smashPrimary = Color.green
-
-    /// Deprecated: use `.pageBackground` — removed after redesign migration.
-    @available(*, deprecated, renamed: "pageBackground")
-    static let smashBackground = Color.pageBackground
-
-    /// Deprecated: use `.chipBackground` — removed after redesign migration.
-    /// Note: old smashSurface was a solid light-grey (#F5F5F5); chipBackground is the
-    /// nearest semantic equivalent in the new glass system (chip-level translucent fill).
-    @available(*, deprecated, renamed: "chipBackground")
-    static let smashSurface = Color.chipBackground
-
-    /// Deprecated: use `.textPrimary` — removed after redesign migration.
-    @available(*, deprecated, renamed: "textPrimary")
-    static let smashText = Color.textPrimary
-
-    /// Deprecated: use `.textSecondary` — removed after redesign migration.
-    @available(*, deprecated, renamed: "textSecondary")
-    static let smashTextSecondary = Color.textSecondary
-
-    /// Deprecated: use `.hairline` — removed after redesign migration.
-    /// Note: old smashBorder was a solid light grey (#E0E0E0); hairline is the
-    /// semantic equivalent (transparent separator in the new glass system).
-    @available(*, deprecated, renamed: "hairline")
-    static let smashBorder = Color.hairline
-
-    /// Deprecated: use `.red` — removed after redesign migration.
-    @available(*, deprecated, renamed: "red")
-    static let smashError = Color.red
-
-    /// Deprecated: use `.court` — removed after redesign migration.
-    @available(*, deprecated, renamed: "court")
-    static let smashMultiSportPin = Color.court
-
-    /// Deprecated: use `.red` or keep this amber for warning-specific semantics.
-    /// Kept as #F57C00 (amber) because smashWarning drives the denied-location hint;
-    /// its warning semantics differ from BWF red (alerts/errors). Migrated separately.
-    @available(*, deprecated, message: "Use .red for alerts or keep #F57C00 for amber warnings — removed after redesign migration.")
-    static let smashWarning = Color(hex: 0xF57C00)
-}

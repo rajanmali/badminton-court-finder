@@ -61,7 +61,10 @@ struct FilterChip: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }) {
             HStack(spacing: 6) {
                 if isOn {
                     Image(systemName: "checkmark")
@@ -70,6 +73,7 @@ struct FilterChip: View {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
                     .tracking(-0.2)
+                    .lineLimit(1)
             }
             .foregroundStyle(isOn ? Color.onAccent : Color.textPrimary)
             .padding(.vertical, 8)
@@ -84,6 +88,7 @@ struct FilterChip: View {
                 }
             }
             .modifier(ConditionalGreenGlow(active: isOn))
+            .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(.plain)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: isOn)
