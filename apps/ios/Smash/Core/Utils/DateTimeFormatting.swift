@@ -11,6 +11,16 @@ func dayLabel(_ dayOfWeek: Int) -> String {
     return dayLabels[dayOfWeek]
 }
 
+/// Converts a `Calendar` weekday component (1 = Sunday … 7 = Saturday) to the
+/// app's 0-based `dayOfWeek` index (0 = Sunday … 6 = Saturday).
+///
+/// Used to highlight "today" in the opening-hours list, where rows are keyed by
+/// the 0-based index. `Calendar.current.component(.weekday, from:)` returns the
+/// 1-based weekday, so subtracting one lines the two conventions up.
+func dayOfWeek(fromWeekday weekday: Int) -> Int {
+    weekday - 1
+}
+
 /// Converts a "HH:MM" or "HH:MM:SS" time string to 12-hour format with am/pm.
 /// Returns "—" for nil/empty input; returns the original string when parsing fails.
 func formatTime(_ t: String?) -> String {
