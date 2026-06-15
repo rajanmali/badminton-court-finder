@@ -45,8 +45,18 @@ enum Route: Hashable {
 /// map's pin-tap handler, routed through `RootTabView`) push onto the same path.
 /// Pushing the Venue Detail covers the whole tab view, so the floating tab bar
 /// is naturally hidden while Detail is open.
+///
+/// ## First-run onboarding
+/// On first launch (when `preferences.hasSeenOnboarding == false`) the
+/// ``OnboardingView`` is presented over the whole app via a `fullScreenCover`.
+/// The cover's `isPresented` binding is derived from the preference: it reads
+/// `true` while onboarding has not been seen, and setting it `false` is a no-op
+/// (onboarding dismisses itself by setting `hasSeenOnboarding = true`, which
+/// flips the derived binding to `false`). Because `preferences` is an
+/// `@Observable`, that write re-runs `body` and the cover dismisses.
 struct RootView: View {
     @State private var path: [Route] = []
+    @Environment(\.preferences) private var preferences
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -58,5 +68,18 @@ struct RootView: View {
                     }
                 }
         }
+        .fullScreenCover(isPresented: showOnboarding) {
+            OnboardingView()
+        }
+    }
+
+    /// `true` while the user has not completed onboarding. The setter is a no-op:
+    /// the cover is dismissed by ``OnboardingView`` setting `hasSeenOnboarding`,
+    /// not by SwiftUI writing through this binding.
+    private var showOnboarding: Binding<Bool> {
+        Binding(
+            get: { !preferences.hasSeenOnboarding },
+            set: { _ in }
+        )
     }
 }

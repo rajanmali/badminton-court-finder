@@ -25,6 +25,7 @@ struct RootTabView: View {
     @State private var model = VenueListModel()
 
     @Environment(\.appEnvironment) private var env
+    @Environment(\.preferences) private var preferences
 
     /// The navigation path owned by ``RootView``; tapping a card/pin appends a
     /// `.venueDetail` route to it.
@@ -45,12 +46,25 @@ struct RootTabView: View {
         }
         .background(Color.pageBackground.ignoresSafeArea())
         .task {
-            // Run venue load and location request concurrently — neither depends
-            // on the other and displayedVenues reacts to both. Moved here from
-            // VenueListScreen so the load happens once for both tabs.
-            async let venueLoad: Void = model.load(using: env.venueRepository)
-            async let locationLoad: Void = model.loadLocation(using: env.locationService)
-            _ = await (venueLoad, locationLoad)
+            // Apply the user's saved default filters before loading so the
+            // captured onboarding defaults take effect on first paint. Sort is
+            // intentionally NOT wired here — applying `defaultSort` is a later PR;
+            // onboarding only persists it.
+            model.filters = preferences.defaultFilters
+
+            // Venues load immediately; they don't depend on location.
+            await model.load(using: env.venueRepository)
+        }
+        // Request location only once onboarding is complete. Keying on
+        // `hasSeenOnboarding` means: on first run this `.task` is a no-op while
+        // the onboarding cover owns the location *priming*, then re-fires the
+        // moment onboarding finishes (flipping the flag) to pick up the user's
+        // grant. On every subsequent launch the flag is already `true`, so it
+        // runs straight away. This keeps the system prompt from firing *behind*
+        // the priming step.
+        .task(id: preferences.hasSeenOnboarding) {
+            guard preferences.hasSeenOnboarding else { return }
+            await model.loadLocation(using: env.locationService)
         }
     }
 
