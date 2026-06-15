@@ -8,7 +8,13 @@ import SwiftUI
 
 extension Color {
     /// Initialise a color from a 24-bit RGB hex literal (e.g. 0x00B964).
-    init(hex: UInt32, opacity: Double = 1.0) {
+    ///
+    /// Marked `nonisolated` so it can be evaluated off the main thread. UIKit
+    /// resolves dynamic colors (e.g. inside `UIColor(dynamicProvider:)`) on the
+    /// SwiftUI async-render thread, not the main actor; under this project's
+    /// `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, a MainActor-isolated
+    /// initializer invoked there would trip Swift 6's isolation assertion.
+    nonisolated init(hex: UInt32, opacity: Double = 1.0) {
         let red   = Double((hex >> 16) & 0xFF) / 255.0
         let green = Double((hex >>  8) & 0xFF) / 255.0
         let blue  = Double( hex        & 0xFF) / 255.0
@@ -16,11 +22,24 @@ extension Color {
     }
 
     /// A color that resolves differently in light vs dark.
-    init(light: UInt32, lightAlpha: Double = 1, dark: UInt32, darkAlpha: Double = 1) {
-        self = Color(uiColor: UIColor { tc in
-            tc.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: dark,  opacity: darkAlpha))
-                : UIColor(Color(hex: light, opacity: lightAlpha))
+    ///
+    /// The `UIColor(dynamicProvider:)` closure is invoked by UIKit/SwiftUI off
+    /// the main thread (the async renderer, exercised heavily by MapLibre). It
+    /// therefore does ONLY pure arithmetic and a direct `UIColor(red:…)` — no
+    /// `Color(hex:)` / `UIColor(Color:)` bridging, which are MainActor-isolated
+    /// under this project's default-MainActor isolation and would crash with a
+    /// SIGTRAP isolation assertion when resolved off-main.
+    nonisolated init(light: UInt32, lightAlpha: Double = 1, dark: UInt32, darkAlpha: Double = 1) {
+        self = Color(uiColor: UIColor { trait in
+            let isDark = trait.userInterfaceStyle == .dark
+            let hex = isDark ? dark : light
+            let alpha = isDark ? darkAlpha : lightAlpha
+            return UIColor(
+                red:   CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue:  CGFloat(hex & 0xFF) / 255,
+                alpha: CGFloat(alpha)
+            )
         })
     }
 }
