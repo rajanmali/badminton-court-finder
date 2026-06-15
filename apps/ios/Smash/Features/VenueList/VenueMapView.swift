@@ -165,7 +165,14 @@ struct VenueMapRepresentable: UIViewRepresentable {
         var venues: [VenueListItem]
         var selectedID: String?
         var onVenueTap: (String, String) -> Void
-        weak var shapeSource: MLNShapeSource?
+        /// Strong reference to the "venues" source. It MUST be strong: when the
+        /// async venue load resolves *after* the style finishes loading, the
+        /// source is built empty at `didFinishLoading` and only populated by the
+        /// later `updateUIView` refresh. A `weak` reference here can deallocate
+        /// before that refresh (MapLibre's `MLNStyle` does not guarantee a strong
+        /// hold once the local `let source` goes out of scope), making the
+        /// refresh silently no-op and leaving the map with zero pins.
+        var shapeSource: MLNShapeSource?
 
         init(
             venues: [VenueListItem],
@@ -209,19 +216,22 @@ struct VenueMapRepresentable: UIViewRepresentable {
             UIColor(red: 0x6B / 255.0, green: 0x71 / 255.0, blue: 0x78 / 255.0, alpha: 1)
 
         /// A coloured halo drawn only behind the *selected* pin, so the selection
-        /// reads as larger + ringed. Radius/opacity are data-driven on the
-        /// `selected` attribute (0 → invisible, 1 → a wide ring); the ring colour
-        /// matches the pin's dedicated/multi-sport colour. Built with the typed
-        /// `forMLNMatchingKey:` initializer (NOT the `MGL_MATCH(...)` format
-        /// string, which throws on MapLibre 6.x).
+        /// reads as larger + ringed.
+        ///
+        /// Selection is expressed by a `predicate` (`selected == 1`) that filters
+        /// the layer to only the selected feature — NOT by a data-driven
+        /// `circleRadius` keyed on `selected`. A `forMLNMatchingKey:` match on the
+        /// numeric `selected` attribute evaluates to its `default` (radius 0) on
+        /// MapLibre 6.x, which is what made the redesigned pins vanish. Constant
+        /// radius + a predicate filter is the robust form: the halo is a fixed 17
+        /// and simply isn't drawn for unselected pins. The ring colour stays
+        /// data-driven on `dedicated` (that match form is known-good).
         private static func makeSelectedRingLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
             let layer = MLNCircleStyleLayer(identifier: "venue-selected-ring", source: source)
-            // Radius: 17 when selected, 0 otherwise (so unselected pins show none).
-            layer.circleRadius = NSExpression(
-                forMLNMatchingKey: NSExpression(forKeyPath: "selected"),
-                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: 17)],
-                default: NSExpression(forConstantValue: 0)
-            )
+            // Only render for the selected feature.
+            layer.predicate = NSPredicate(format: "selected == 1")
+            // Constant radius — the wide halo behind the selected pin.
+            layer.circleRadius = NSExpression(forConstantValue: 17)
             // Colour by dedicated/multi-sport so the ring matches the dot.
             layer.circleColor = NSExpression(
                 forMLNMatchingKey: NSExpression(forKeyPath: "dedicated"),
@@ -229,39 +239,30 @@ struct VenueMapRepresentable: UIViewRepresentable {
                         NSExpression(forConstantValue: dedicatedColor)],
                 default: NSExpression(forConstantValue: multiSportColor)
             )
-            // Soft halo only on the selected one (opacity 0 when not selected).
-            layer.circleOpacity = NSExpression(
-                forMLNMatchingKey: NSExpression(forKeyPath: "selected"),
-                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: 0.35)],
-                default: NSExpression(forConstantValue: 0)
-            )
+            // Soft coloured halo.
+            layer.circleOpacity = NSExpression(forConstantValue: 0.35)
             return layer
         }
 
-        /// White halo behind each dot. The selected pin gets a slightly larger
-        /// white ring (data-driven on `selected`) so it reads as raised.
+        /// White halo behind each dot. Constant radius/colour/opacity — the
+        /// selected pin reads as raised via the coloured selected-ring layer
+        /// beneath it, not via a per-feature ring size.
         private static func makeRingsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
             let layer = MLNCircleStyleLayer(identifier: "venue-rings", source: source)
-            layer.circleRadius = NSExpression(
-                forMLNMatchingKey: NSExpression(forKeyPath: "selected"),
-                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: 15)],
-                default: NSExpression(forConstantValue: 13)
-            )
+            layer.circleRadius = NSExpression(forConstantValue: 13)
             layer.circleColor = NSExpression(forConstantValue: UIColor.white)
             layer.circleOpacity = NSExpression(forConstantValue: 0.9)
             return layer
         }
 
         /// The coloured dot. Data-driven: greenBright (#19D680) when
-        /// `dedicated == 1`, else court grey (#6B7178). The selected pin's dot
-        /// grows (data-driven on `selected`) to reinforce the selection.
+        /// `dedicated == 1`, else court grey (#6B7178). Radius is constant — a
+        /// data-driven radius keyed on the numeric `selected` attribute resolved
+        /// to 0 on MapLibre 6.x and hid every dot, so selection is now conveyed
+        /// by the coloured selected-ring layer instead.
         private static func makeDotsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
             let layer = MLNCircleStyleLayer(identifier: "venue-dots", source: source)
-            layer.circleRadius = NSExpression(
-                forMLNMatchingKey: NSExpression(forKeyPath: "selected"),
-                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: 11)],
-                default: NSExpression(forConstantValue: 9)
-            )
+            layer.circleRadius = NSExpression(forConstantValue: 9)
             // Data-driven match on the `dedicated` attribute (1 → green, else grey).
             // Built with MapLibre's typed match initializer rather than an
             // NSExpression(format:) string: MapLibre 6.x renamed the MGL_* custom
