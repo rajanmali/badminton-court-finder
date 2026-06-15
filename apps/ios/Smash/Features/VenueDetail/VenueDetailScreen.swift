@@ -234,6 +234,8 @@ private struct TitleCard: View {
                 .tracking(-1.0)
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
                 .padding(.bottom, 7)
 
             if !venue.address.isEmpty {

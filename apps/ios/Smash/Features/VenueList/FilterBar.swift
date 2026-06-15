@@ -77,7 +77,7 @@ struct FilterBar: View {
     private var locationDeniedHint: some View {
         Text("Enable location to filter by distance")
             .font(Typography.caption)
-            .foregroundStyle(Color.smashWarning)
+            .foregroundStyle(Color.warning)
     }
 
     private var priceRow: some View {
