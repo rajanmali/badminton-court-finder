@@ -7,7 +7,7 @@ struct UserCoords: Sendable, Equatable {
     let longitude: Double
 }
 
-struct FilterState: Sendable, Equatable {
+struct FilterState: Sendable, Equatable, Codable {
     var radiusKm: Double?
     var maxPriceCents: Int?
     var dedicatedOnly: Bool
