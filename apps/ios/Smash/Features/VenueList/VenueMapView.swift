@@ -209,9 +209,9 @@ struct VenueMapRepresentable: UIViewRepresentable {
         }
 
         // ── Pin palette (BWF court) ────────────────────────────────────────
-        // dedicated → greenBright #19D680, multi-sport → court grey #6B7178.
+        // dedicated → greenBright #2BB183, multi-sport → court grey #6B7178.
         private static let dedicatedColor =
-            UIColor(red: 0x19 / 255.0, green: 0xD6 / 255.0, blue: 0x80 / 255.0, alpha: 1)
+            UIColor(red: 0x2B / 255.0, green: 0xB1 / 255.0, blue: 0x83 / 255.0, alpha: 1)
         private static let multiSportColor =
             UIColor(red: 0x6B / 255.0, green: 0x71 / 255.0, blue: 0x78 / 255.0, alpha: 1)
 
@@ -255,7 +255,7 @@ struct VenueMapRepresentable: UIViewRepresentable {
             return layer
         }
 
-        /// The coloured dot. Data-driven: greenBright (#19D680) when
+        /// The coloured dot. Data-driven: greenBright (#2BB183) when
         /// `dedicated == 1`, else court grey (#6B7178). Radius is constant — a
         /// data-driven radius keyed on the numeric `selected` attribute resolved
         /// to 0 on MapLibre 6.x and hid every dot, so selection is now conveyed
