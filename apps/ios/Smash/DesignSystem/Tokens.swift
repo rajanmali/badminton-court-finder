@@ -49,14 +49,15 @@ extension Color {
 
 extension Color {
     // ── Green family ──────────────────────────────────────────────
-    /// BWF court green — primary accent (prices, active, CTAs, dedicated). #00B964
-    static let green      = Color(hex: 0x00B964)
-    /// Gradient top / glow. #19D680
-    static let greenBright = Color(hex: 0x19D680)
-    /// Gradient bottom / on-light text. #0A6E42
-    static let greenDeep  = Color(hex: 0x0A6E42)
-    /// Darkest green ink. #053A23
-    static let greenInk   = Color(hex: 0x053A23)
+    /// BWF court green — primary accent (prices, active, CTAs, dedicated). #0B8A5E
+    /// Deep cool emerald — distinct from iOS system green #34C759.
+    static let green      = Color(hex: 0x0B8A5E)
+    /// Gradient top / glow. #2BB183 (lower chroma than #19D680)
+    static let greenBright = Color(hex: 0x2BB183)
+    /// Gradient bottom / on-light text. #075E40 (slightly cooler)
+    static let greenDeep  = Color(hex: 0x075E40)
+    /// Darkest green ink. #04301D
+    static let greenInk   = Color(hex: 0x04301D)
 
     // ── Red family ────────────────────────────────────────────────
     /// BWF red — energy, alerts, active-filter dot, "Closed". #E5392B
@@ -214,11 +215,11 @@ enum Typography {
 // MARK: - Green glow shadow
 
 /// Reusable green-glow View modifier.
-/// Produces: `0 2px 10px rgba(0,185,100,.40)` — matches system.css `.chip-on` / `.btn-primary` glow.
+/// Produces: `0 2px 5px rgba(7,94,64,.16)` — subtle lift, no visible green tint on white glass cards.
 struct GreenGlowModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .shadow(color: Color(hex: 0x00B964, opacity: 0.40), radius: 10, x: 0, y: 2)
+            .shadow(color: Color(hex: 0x075E40, opacity: 0.16), radius: 5, x: 0, y: 2)
     }
 }
 

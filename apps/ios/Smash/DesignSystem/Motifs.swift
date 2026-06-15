@@ -168,7 +168,7 @@ struct SmashBackdrop: View {
             // Soft green radial tint, anchored toward the top-right corner.
             RadialGradient(
                 colors: [
-                    Color(hex: 0x19D680, opacity: colorScheme == .dark ? 0.26 : 0.30),
+                    Color(hex: 0x2BB183, opacity: colorScheme == .dark ? 0.22 : 0.24),
                     .clear
                 ],
                 center: UnitPoint(x: 0.86, y: -0.02),
@@ -192,8 +192,8 @@ struct SmashBackdrop: View {
                 dotSize: 1.6,
                 spacing: 20,
                 color: colorScheme == .dark
-                    ? Color(hex: 0x19D680, opacity: 0.36)
-                    : Color(hex: 0x0A6E42, opacity: 0.45),
+                    ? Color(hex: 0x2BB183, opacity: 0.30)
+                    : Color(hex: 0x075E40, opacity: 0.38),
                 opacity: colorScheme == .dark ? 0.5 : 0.45
             )
             .mask(
