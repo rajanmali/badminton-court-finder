@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - RootTabView
 
 /// The navigation root that owns the shared venue model and switches between the
-/// List and Map tabs via the floating ``TabBar``.
+/// List, Map, and Saved tabs via the floating ``TabBar``.
 ///
 /// ## Single source of truth
 /// `model` lives here in `@State` and is passed *by reference* into both
@@ -74,6 +74,8 @@ struct RootTabView: View {
             VenueListScreen(model: model, onSelectVenue: select)
         case .map:
             VenueMapScreen(model: model, onSelectVenue: select)
+        case .saved:
+            SavedScreen(model: model, onSelectVenue: select)
         }
     }
 

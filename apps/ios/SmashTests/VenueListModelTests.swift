@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Smash
 
@@ -66,5 +67,55 @@ struct VenueListModelTests {
         }
         #expect(!message.isEmpty)
         #expect(model.displayedVenues.isEmpty)
+    }
+
+    // MARK: allVenues (Saved tab source)
+
+    /// `allVenues` returns the full loaded set sorted A–Z and is *not* narrowed
+    /// by the active filters — the Saved tab relies on this so favourites show
+    /// regardless of List/Map filtering.
+    @Test func allVenuesReturnsFullSetSortedAndIgnoresFilters() async {
+        let repo = StubVenueRepository(venues: [
+            makeVenue(id: "b", name: "Bravo"),
+            makeVenue(id: "a", name: "Alpha"),
+        ])
+        let model = VenueListModel()
+        await model.load(using: repo)
+
+        // A filter that would exclude one venue in `displayedVenues`…
+        model.filters = FilterState(radiusKm: nil, maxPriceCents: 1, dedicatedOnly: true)
+        #expect(model.displayedVenues.isEmpty)
+
+        // …does not affect `allVenues`, which stays the full set, sorted A–Z.
+        #expect(model.allVenues.map { $0.id } == ["a", "b"])
+    }
+
+    @Test func allVenuesIsEmptyBeforeLoad() {
+        let model = VenueListModel()
+        #expect(model.allVenues.isEmpty)
+    }
+
+    /// Filtering `allVenues` by `AppPreferences` favourites yields exactly the
+    /// favourited subset — the computation the Saved screen performs.
+    @Test func savedSubsetMatchesFavourites() async {
+        let suiteName = "test-saved-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let repo = StubVenueRepository(venues: [
+            makeVenue(id: "a", name: "Alpha"),
+            makeVenue(id: "b", name: "Bravo"),
+            makeVenue(id: "c", name: "Charlie"),
+        ])
+        let model = VenueListModel()
+        await model.load(using: repo)
+
+        let prefs = AppPreferences(defaults: defaults)
+        prefs.toggleFavourite("a")
+        prefs.toggleFavourite("c")
+
+        let saved = model.allVenues.filter { prefs.isFavourite($0.id) }
+        #expect(saved.map { $0.id } == ["a", "c"])
     }
 }
