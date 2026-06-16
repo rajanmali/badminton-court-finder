@@ -60,11 +60,23 @@ final class VenueListModel {
     /// Uses `LocationOutcome.locationState` — the same helper that the
     /// `LocationOutcomeMappingTests` exercise — so outcome → model mapping
     /// stays in one place.
+    ///
+    /// **Sort fallback (UX fix #4 / spec c):** when location is not available
+    /// (denied *or* unavailable → `userCoords == nil`) and the current sort is
+    /// `.nearest`, the sort is replaced with `.priceLowToHigh` because "Nearest"
+    /// is meaningless without coordinates. A user's explicit non-nearest choice
+    /// is never overridden. Conversely, obtaining a location does NOT force any
+    /// sort change — the user may have already selected a preference.
     func loadLocation(using service: any LocationService) async {
         let outcome = await service.requestLocation()
         let state = outcome.locationState
         self.userCoords = state.coords
         self.locationDenied = state.permissionDenied
+
+        // Apply sort fallback when coordinates are unavailable.
+        if self.userCoords == nil && self.sortOption == .nearest {
+            self.sortOption = .priceLowToHigh
+        }
     }
 
     /// Fetches venues via the injected repository and folds the result into
