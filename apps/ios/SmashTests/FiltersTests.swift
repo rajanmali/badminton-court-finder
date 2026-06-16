@@ -161,6 +161,71 @@ struct ApplyFiltersCombinedTests {
     }
 }
 
+// MARK: - sortVenues
+
+struct SortVenuesTests {
+    // Fixtures with explicit distance / price / court / name spreads so each
+    // sort key produces a distinct, checkable order.
+    private let a = makeVenue(id: "a", name: "Alpha",   courtCount: 6, distanceKm: 8.0,  priceFrom: 3500)
+    private let b = makeVenue(id: "b", name: "Bravo",   courtCount: 12, distanceKm: 2.0, priceFrom: 4000)
+    private let c = makeVenue(id: "c", name: "Charlie", courtCount: 4, distanceKm: 5.0,  priceFrom: 2900)
+
+    private var sample: [VenueListItem] { [a, b, c] }
+
+    // .nearest — distance ascending
+    @Test func nearestOrdersByDistanceAscending() {
+        let result = sortVenues(sample, by: .nearest)
+        #expect(result.map(\.id) == ["b", "c", "a"])  // 2.0, 5.0, 8.0
+    }
+
+    @Test func nearestPutsNilDistancesLast() {
+        let noDist = makeVenue(id: "z", name: "Zulu", distanceKm: nil)
+        let result = sortVenues([a, noDist, b], by: .nearest)
+        #expect(result.map(\.id) == ["b", "a", "z"])  // 2.0, 8.0, then nil
+        #expect(result.last?.id == "z")
+    }
+
+    @Test func nearestFallsBackToAlphabeticalWhenNoVenueHasDistance() {
+        let v1 = makeVenue(id: "v1", name: "Charlie", distanceKm: nil)
+        let v2 = makeVenue(id: "v2", name: "Alpha",   distanceKm: nil)
+        let v3 = makeVenue(id: "v3", name: "Bravo",   distanceKm: nil)
+        let result = sortVenues([v1, v2, v3], by: .nearest)
+        #expect(result.map(\.name) == ["Alpha", "Bravo", "Charlie"])
+    }
+
+    // .priceLowToHigh
+    @Test func priceOrdersAscending() {
+        let result = sortVenues(sample, by: .priceLowToHigh)
+        #expect(result.map(\.id) == ["c", "a", "b"])  // 2900, 3500, 4000
+    }
+
+    @Test func pricePutsNilPricesLast() {
+        let noPrice = makeVenue(id: "np", name: "No Price", priceFrom: nil)
+        let result = sortVenues([a, noPrice, c], by: .priceLowToHigh)
+        #expect(result.map(\.id) == ["c", "a", "np"])  // 2900, 3500, then nil
+        #expect(result.last?.id == "np")
+    }
+
+    // .mostCourts
+    @Test func mostCourtsOrdersDescending() {
+        let result = sortVenues(sample, by: .mostCourts)
+        #expect(result.map(\.id) == ["b", "a", "c"])  // 12, 6, 4
+    }
+
+    // .alphabetical
+    @Test func alphabeticalOrdersByName() {
+        let result = sortVenues(sample, by: .alphabetical)
+        #expect(result.map(\.name) == ["Alpha", "Bravo", "Charlie"])
+    }
+
+    @Test func emptyInputReturnsEmpty() {
+        #expect(sortVenues([], by: .nearest).isEmpty)
+        #expect(sortVenues([], by: .priceLowToHigh).isEmpty)
+        #expect(sortVenues([], by: .mostCourts).isEmpty)
+        #expect(sortVenues([], by: .alphabetical).isEmpty)
+    }
+}
+
 // MARK: - filtersAreActive (Map "active filters" red dot)
 
 struct FiltersAreActiveTests {

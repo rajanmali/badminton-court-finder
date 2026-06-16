@@ -34,28 +34,23 @@ struct ListLoadingState: View {
 
 // MARK: - Meta row
 
-/// The "{n} venues" / "Nearest first ⌄" row shown above the loaded card list.
+/// The "{n} venues · {sort}" row shown above the loaded card list.
+///
+/// The old inert "Nearest first ⌄" control is gone — sort now lives in the
+/// shared Filters sheet. This row instead appends the active sort as a
+/// non-interactive hint so the user can see how the list is ordered.
 /// Mirrors the meta row in `ListScreen` (`screens.jsx`).
 struct ListMetaRow: View {
     let count: Int
+    /// The active sort's label, shown as a non-interactive hint after the count.
+    let sortLabel: String
 
     var body: some View {
-        HStack {
-            Text("\(count) \(count == 1 ? "venue" : "venues")")
-                .font(Typography.caption)
-                .foregroundStyle(Color.textSecondary)
-
-            Spacer()
-
-            HStack(spacing: 5) {
-                Text("Nearest first")
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-            }
+        Text("\(count) \(count == 1 ? "venue" : "venues") · \(sortLabel)")
             .font(Typography.caption)
             .foregroundStyle(Color.textSecondary)
-        }
-        .padding(.horizontal, Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.md)
     }
 }
 

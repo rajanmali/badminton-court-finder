@@ -15,6 +15,10 @@ struct ListHeader: View {
     /// Invoked when the locate pill is tapped (host wires this to the location
     /// service via the app environment).
     let onLocate: () -> Void
+    /// Invoked when the Filters pill is tapped (host presents the shared sheet).
+    let onOpenFilters: () -> Void
+    /// Whether any filter is engaged — drives the Filters pill's active dot.
+    let filtersActive: Bool
 
     var body: some View {
         HStack(alignment: .bottom) {
@@ -38,7 +42,10 @@ struct ListHeader: View {
 
             Spacer(minLength: Spacing.md)
 
-            locateButton
+            HStack(spacing: 8) {
+                FiltersButton(isActive: filtersActive, action: onOpenFilters)
+                locateButton
+            }
         }
         .padding(.horizontal, Spacing.screen)
         .padding(.top, 2)
@@ -62,16 +69,16 @@ struct ListHeader: View {
 #Preview("List header — light") {
     ZStack(alignment: .top) {
         SmashBackdrop()
-        ListHeader(onLocate: {})
+        ListHeader(onLocate: {}, onOpenFilters: {}, filtersActive: false)
             .padding(.top, 60)
     }
     .preferredColorScheme(.light)
 }
 
-#Preview("List header — dark") {
+#Preview("List header — active filters, dark") {
     ZStack(alignment: .top) {
         SmashBackdrop()
-        ListHeader(onLocate: {})
+        ListHeader(onLocate: {}, onOpenFilters: {}, filtersActive: true)
             .padding(.top, 60)
     }
     .preferredColorScheme(.dark)
