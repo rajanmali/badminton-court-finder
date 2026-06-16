@@ -54,6 +54,15 @@ final class VenueListModel {
         return sortVenues(filtered, by: sortOption)
     }
 
+    /// The full loaded venue set, alphabetically by name and *unaffected by the
+    /// active filters or sort*. The Saved tab reads this so favourited venues
+    /// always show regardless of how the List/Map tabs are currently filtered.
+    /// Empty until the list has loaded.
+    var allVenues: [VenueListItem] {
+        guard case let .loaded(venues) = state else { return [] }
+        return venues.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
     /// Requests the user's location via the injected service and folds the
     /// outcome into ``userCoords`` and ``locationDenied``.
     ///

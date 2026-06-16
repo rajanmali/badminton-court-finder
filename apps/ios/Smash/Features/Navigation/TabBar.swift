@@ -2,14 +2,16 @@ import SwiftUI
 
 // MARK: - View mode
 
-/// Which presentation the venue browser is showing — list or map. Ports the RN
-/// `'list' | 'map'` union and is the selection driving the bottom ``TabBar``.
+/// Which presentation the venue browser is showing — list, map, or the saved
+/// favourites tab. Extends the RN `'list' | 'map'` union with the third
+/// `.saved` tab and is the selection driving the bottom ``TabBar``.
 ///
 /// Moved here from the deleted `ViewToggle.swift` (the old top segmented control)
-/// so it lives alongside the tab bar that now owns the list/map switch.
+/// so it lives alongside the tab bar that now owns the list/map/saved switch.
 enum ViewMode: Sendable, Equatable {
     case list
     case map
+    case saved
 }
 
 // MARK: - TabBar
@@ -18,8 +20,8 @@ enum ViewMode: Sendable, Equatable {
 /// Ports the `TabBar` component in `design_handoff_smash/app/glass.jsx`.
 ///
 /// Visual spec:
-/// - Container: thick-glass capsule (`.glass(.thick, in: Capsule())`), ~200pt
-///   wide, centered, padded, floating above the home indicator.
+/// - Container: thick-glass capsule (`.glass(.thick, in: Capsule())`), ~290pt
+///   wide (three segments), centered, padded, floating above the home indicator.
 /// - Active segment: a solid green capsule (`LinearGradient(.greenBright →
 ///   .green)`) with `.onAccent` text/icon and a `.greenGlow()`.
 /// - Inactive segment: `.textSecondary` text/icon over the bare glass.
@@ -34,8 +36,9 @@ struct TabBar: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The capsule width per the design (`width: 200` in the prototype).
-    private static let width: CGFloat = 200
+    /// The capsule width. Widened from the prototype's two-segment `200` to fit
+    /// three segments (List / Map / Saved) while keeping ≥44pt tap targets.
+    private static let width: CGFloat = 290
 
     /// `Namespace` for the matched-geometry slide of the active capsule between
     /// segments. Animating a single shared capsule (rather than fading two)
@@ -46,6 +49,7 @@ struct TabBar: View {
         HStack(spacing: 4) {
             segment(.list, title: "List", systemImage: "list.bullet")
             segment(.map, title: "Map", systemImage: "map")
+            segment(.saved, title: "Saved", systemImage: "bookmark.fill")
         }
         .padding(5)
         .frame(width: Self.width)
@@ -61,12 +65,13 @@ struct TabBar: View {
         Button {
             select(value)
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: systemImage)
                     .font(.system(size: 16, weight: .semibold))
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
                     .tracking(-0.2)
+                    .lineLimit(1)
             }
             .foregroundStyle(isActive ? Color.onAccent : Color.textSecondary)
             .frame(maxWidth: .infinity)
@@ -115,8 +120,20 @@ struct TabBar: View {
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Tab bar — List selected") {
     @Previewable @State var selection: ViewMode = .list
+    return ZStack {
+        SmashBackdrop()
+        VStack {
+            Spacer()
+            TabBar(selection: $selection)
+                .padding(.bottom, 26)
+        }
+    }
+}
+
+#Preview("Tab bar — Saved selected") {
+    @Previewable @State var selection: ViewMode = .saved
     return ZStack {
         SmashBackdrop()
         VStack {

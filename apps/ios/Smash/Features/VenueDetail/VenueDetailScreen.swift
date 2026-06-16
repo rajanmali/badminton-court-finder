@@ -161,11 +161,14 @@ private struct HeroView: View {
 }
 
 /// The hero's top chrome — a glass back pill (left) and star + share glass pills
-/// (right), all with white icons over the hero. The back pill dismisses; star is
-/// purely visual; share offers the booking URL when present.
+/// (right), all with white icons over the hero. The back pill dismisses; the star
+/// toggles this venue's persisted favourite (UX fix #7); share offers the
+/// booking URL when present.
 private struct HeroChrome: View {
     let venue: VenueDetail
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.preferences) private var preferences
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack {
@@ -182,12 +185,8 @@ private struct HeroChrome: View {
             Spacer()
 
             HStack(spacing: 9) {
-                // Star (visual only — no rating data in the model).
-                Image(systemName: "star")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .glass(.ultraThin, in: Circle())
+                // Favourite — toggles this venue's saved state (UX fix #7).
+                favouriteButton
 
                 // Share the booking URL when there is one.
                 if let url = URL(string: venue.bookingUrl), !venue.bookingUrl.isEmpty {
@@ -212,6 +211,35 @@ private struct HeroChrome: View {
         .frame(maxHeight: .infinity, alignment: .top)
         // Push below the status bar.
         .padding(.top, 50)
+    }
+
+    /// The favourite (star) pill. Filled yellow star when saved, outline white
+    /// when not; toggling persists via ``AppPreferences`` with a light haptic and
+    /// a reduce-motion-safe spring. The 40×40 glass circle gives a ≥44pt target.
+    private var favouriteButton: some View {
+        let isFavourite = preferences.isFavourite(venue.id)
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            if reduceMotion {
+                preferences.toggleFavourite(venue.id)
+            } else {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                    preferences.toggleFavourite(venue.id)
+                }
+            }
+        } label: {
+            Image(systemName: isFavourite ? "star.fill" : "star")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isFavourite ? Color.yellow : .white)
+                .frame(width: 40, height: 40)
+                .glass(.ultraThin, in: Circle())
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Saved")
+        .accessibilityValue(isFavourite ? "Saved" : "Not saved")
+        .accessibilityHint(isFavourite ? "Remove from saved" : "Add to saved")
+        .accessibilityAddTraits(isFavourite ? [.isButton, .isSelected] : .isButton)
     }
 }
 
