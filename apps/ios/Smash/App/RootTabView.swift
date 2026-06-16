@@ -46,11 +46,10 @@ struct RootTabView: View {
         }
         .background(Color.pageBackground.ignoresSafeArea())
         .task {
-            // Apply the user's saved default filters before loading so the
-            // captured onboarding defaults take effect on first paint. Sort is
-            // intentionally NOT wired here — applying `defaultSort` is a later PR;
-            // onboarding only persists it.
+            // Apply the user's saved default filters and sort before loading so
+            // the captured onboarding defaults take effect on first paint.
             model.filters = preferences.defaultFilters
+            model.sortOption = preferences.defaultSort
 
             // Venues load immediately; they don't depend on location.
             await model.load(using: env.venueRepository)

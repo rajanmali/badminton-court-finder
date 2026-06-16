@@ -4,8 +4,9 @@ import SwiftUI
 ///
 /// A `ZStack` of overlays over a full-bleed ``VenueMapView``:
 /// - a top legibility **scrim** under a "Smash" wordmark (+ green dot) and a
-///   thick-glass **"Filters" pill** that reveals the shared ``FilterBar`` and
-///   shows a red dot while any filter is active;
+///   thick-glass **``FiltersButton``** that presents the shared ``FiltersSheet``
+///   (the same sheet the List tab opens) and shows an active dot while any
+///   filter is engaged;
 /// - an ultra-thin glass **locate** button bottom-right;
 /// - a thick-glass **preview card** that rises when a pin is tapped (court tile,
 ///   name + badge, suburb · dist, From $X/hr + courts, ✕, full-width "View
@@ -25,7 +26,7 @@ struct VenueMapScreen: View {
     /// pushes the venue detail onto the navigation path.
     var onSelectVenue: (String, String) -> Void = { _, _ in }
 
-    /// Whether the collapsible filter panel is revealed.
+    /// Whether the shared Filters sheet is presented.
     @State private var showFilters = false
 
     /// The selected pin's venue id, if any. Drives the preview card + the map's
@@ -66,28 +67,31 @@ struct VenueMapScreen: View {
         }
         // We draw custom chrome, so hide the system navigation bar.
         .toolbar(.hidden, for: .navigationBar)
+        // The shared Filters + Sort sheet — same component the List tab presents,
+        // bound to the same model so filters/sort stay unified across tabs.
+        .sheet(isPresented: $showFilters) {
+            FiltersSheet(
+                filters: $model.filters,
+                sort: $model.sortOption,
+                locationDenied: model.locationDenied
+            )
+        }
     }
 
-    // MARK: - Top chrome (scrim + wordmark + Filters pill + filter panel)
+    // MARK: - Top chrome (scrim + wordmark + Filters button)
 
     private var topChrome: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center) {
                 wordmark
                 Spacer()
-                filtersPill
+                FiltersButton(
+                    isActive: filtersAreActive(model.filters),
+                    action: { showFilters = true }
+                )
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-
-            if showFilters {
-                FilterBar(
-                    filters: $model.filters,
-                    locationDenied: model.locationDenied
-                )
-                .padding(.top, 11)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(alignment: .top) {
@@ -120,30 +124,6 @@ struct VenueMapScreen: View {
                 .frame(width: 8, height: 8)
                 .greenGlow()
         }
-    }
-
-    private var filtersPill: some View {
-        Button {
-            toggleFilters()
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.green)
-                Text("Filters")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
-                if filtersAreActive(model.filters) {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 7, height: 7)
-                }
-            }
-            .padding(.vertical, 9)
-            .padding(.horizontal, 14)
-            .glass(.thick, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Locate button
@@ -203,16 +183,6 @@ struct VenueMapScreen: View {
         } else {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                 selectedID = nil
-            }
-        }
-    }
-
-    private func toggleFilters() {
-        if reduceMotion {
-            showFilters.toggle()
-        } else {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                showFilters.toggle()
             }
         }
     }
@@ -374,24 +344,22 @@ private func mapPreviewVenues() -> [VenueListItem] {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Map — filters revealed, light") {
+#Preview("Map — active filters, light") {
     let model = VenueListModel.preview(
         state: .loaded(mapPreviewVenues()),
         filters: FilterState(radiusKm: 10, maxPriceCents: 3500, dedicatedOnly: true)
     )
     NavigationStack {
-        VenueMapScreenPreviewHarness(model: model, showFilters: true)
+        VenueMapScreenPreviewHarness(model: model)
     }
     .preferredColorScheme(.light)
 }
 
 /// A tiny harness that drives ``VenueMapScreen``'s private overlay state for
-/// previews (selected pin / revealed filters) without exposing that state in
-/// the production API.
+/// previews (selected pin) without exposing that state in the production API.
 private struct VenueMapScreenPreviewHarness: View {
     @Bindable var model: VenueListModel
     var selectedID: String?
-    var showFilters: Bool = false
 
     var body: some View {
         ZStack {
@@ -400,8 +368,7 @@ private struct VenueMapScreenPreviewHarness: View {
             SmashBackdrop()
             VenueMapScreenOverlayPreview(
                 model: model,
-                selectedID: selectedID,
-                showFilters: showFilters
+                selectedID: selectedID
             )
         }
     }
@@ -413,12 +380,10 @@ private struct VenueMapScreenPreviewHarness: View {
 private struct VenueMapScreenOverlayPreview: View {
     @Bindable var model: VenueListModel
     @State var selectedID: String?
-    @State var showFilters: Bool
 
-    init(model: VenueListModel, selectedID: String?, showFilters: Bool) {
+    init(model: VenueListModel, selectedID: String?) {
         self.model = model
         _selectedID = State(initialValue: selectedID)
-        _showFilters = State(initialValue: showFilters)
     }
 
     private var selectedVenue: VenueListItem? {
@@ -438,28 +403,10 @@ private struct VenueMapScreenOverlayPreview: View {
                         Circle().fill(Color.green).frame(width: 8, height: 8).greenGlow()
                     }
                     Spacer()
-                    HStack(spacing: 7) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color.green)
-                        Text("Filters")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.textPrimary)
-                        if filtersAreActive(model.filters) {
-                            Circle().fill(Color.red).frame(width: 7, height: 7)
-                        }
-                    }
-                    .padding(.vertical, 9)
-                    .padding(.horizontal, 14)
-                    .glass(.thick, in: Capsule())
+                    FiltersButton(isActive: filtersAreActive(model.filters), action: {})
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-
-                if showFilters {
-                    FilterBar(filters: $model.filters, locationDenied: model.locationDenied)
-                        .padding(.top, 11)
-                }
             }
 
             Image(systemName: "location.fill")

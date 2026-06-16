@@ -3,11 +3,15 @@ import SwiftUI
 /// The List tab — the full redesigned List experience.
 ///
 /// Assembles the screen top → bottom over a ``SmashBackdrop``: a custom glass
-/// ``ListHeader`` (wordmark + status dot + locate pill) in place of the system
-/// nav bar, then state content that switches on `model.state` — the loading
-/// skeleton (``ListLoadingState``), the loaded ``FilterBar`` + ``ListMetaRow`` +
-/// glass ``VenueRow`` cards (or ``ListEmptyState`` when filtered to zero), and
-/// the ``ListErrorState`` on failure.
+/// ``ListHeader`` (wordmark + status dot + a ``FiltersButton`` + locate pill) in
+/// place of the system nav bar, then state content that switches on
+/// `model.state` — the loading skeleton (``ListLoadingState``), the loaded
+/// ``ListMetaRow`` + glass ``VenueRow`` cards (or ``ListEmptyState`` when
+/// filtered to zero), and the ``ListErrorState`` on failure.
+///
+/// Filters and Sort live in the shared ``FiltersSheet`` (the same sheet the Map
+/// tab presents), opened from the header's ``FiltersButton`` — so the list
+/// scrolls cleanly under the header with no always-open inline panel.
 ///
 /// Mirrors `ListScreen` in `design_handoff_smash/app/screens.jsx`.
 ///
@@ -15,8 +19,8 @@ import SwiftUI
 ///
 /// The model is created and owned by ``RootTabView``'s `@State`. This screen
 /// holds a non-owning `@Bindable` reference so it can derive `$model.filters`
-/// for ``FilterBar`` without changing ownership — the documented Apple pattern
-/// for passing an `@Observable` down the hierarchy.
+/// and `$model.sortOption` for the ``FiltersSheet`` without changing ownership —
+/// the documented Apple pattern for passing an `@Observable` down the hierarchy.
 struct VenueListScreen: View {
     @Bindable var model: VenueListModel
 
@@ -28,9 +32,16 @@ struct VenueListScreen: View {
     /// programmatic push). List rows also push via `NavigationLink(value:)`.
     var onSelectVenue: (String, String) -> Void = { _, _ in }
 
+    /// Whether the shared Filters sheet is presented.
+    @State private var showFilters = false
+
     var body: some View {
         VStack(spacing: 14) {
-            ListHeader(onLocate: locate)
+            ListHeader(
+                onLocate: locate,
+                onOpenFilters: { showFilters = true },
+                filtersActive: filtersAreActive(model.filters)
+            )
             content
         }
         .padding(.top, 8)
@@ -38,6 +49,15 @@ struct VenueListScreen: View {
         .background(SmashBackdrop())
         // We draw a custom header, so hide the system navigation bar.
         .toolbar(.hidden, for: .navigationBar)
+        // The shared Filters + Sort sheet — same component the Map tab presents.
+        // Bound straight to the model so edits update the list live behind it.
+        .sheet(isPresented: $showFilters) {
+            FiltersSheet(
+                filters: $model.filters,
+                sort: $model.sortOption,
+                locationDenied: model.locationDenied
+            )
+        }
     }
 
     // MARK: - State content
@@ -58,26 +78,21 @@ struct VenueListScreen: View {
 
     // MARK: - Loaded body
 
-    /// FilterBar + (meta row + card list) — or the empty state when filters
-    /// match nothing. Bottom content padding clears the floating tab bar so the
-    /// last card isn't hidden behind it.
+    /// Meta row + card list — or the empty state when filters match nothing.
+    /// Filters now live in the shared sheet (opened from the header), so the
+    /// list scrolls cleanly under the header with no inline panel. Bottom
+    /// content padding clears the floating tab bar so the last card isn't hidden
+    /// behind it.
     @ViewBuilder
     private var loadedBody: some View {
         if model.displayedVenues.isEmpty {
-            VStack(spacing: 0) {
-                FilterBar(
-                    filters: $model.filters,
-                    locationDenied: model.locationDenied
-                )
-                ListEmptyState(onReset: resetFilters)
-            }
+            ListEmptyState(onReset: resetFilters)
         } else {
             VStack(spacing: 10) {
-                FilterBar(
-                    filters: $model.filters,
-                    locationDenied: model.locationDenied
+                ListMetaRow(
+                    count: model.displayedVenues.count,
+                    sortLabel: model.sortOption.label
                 )
-                ListMetaRow(count: model.displayedVenues.count)
                 cardList
             }
         }
@@ -154,9 +169,12 @@ private func previewVenues() -> [VenueListItem] {
     .preferredColorScheme(.light)
 }
 
-#Preview("List — loaded, dark") {
+#Preview("List — loaded, A–Z, dark") {
     NavigationStack {
-        VenueListScreen(model: .preview(state: .loaded(previewVenues())))
+        VenueListScreen(model: .preview(
+            state: .loaded(previewVenues()),
+            sortOption: .alphabetical
+        ))
     }
     .preferredColorScheme(.dark)
 }

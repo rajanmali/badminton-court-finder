@@ -32,6 +32,11 @@ final class VenueListModel {
     /// Active filters. Defaults to `.default`; PR 8 makes these live.
     var filters: FilterState = .default
 
+    /// How the venue list is ordered. Defaults to `.nearest`; seeded from the
+    /// user's saved `defaultSort` in ``RootTabView`` and made live via the
+    /// shared Filters sheet's Sort section.
+    var sortOption: SortOption = .nearest
+
     /// The user's coordinates, when known. Populated by ``loadLocation(using:)``.
     var userCoords: UserCoords? = nil
 
@@ -39,10 +44,14 @@ final class VenueListModel {
     /// Drives the distance-chip disabled state and the orange hint in FilterBar.
     var locationDenied: Bool = false
 
-    /// Venues to render: filtered + sorted when loaded, empty otherwise.
+    /// Venues to render: filtered then sorted by ``sortOption`` when loaded,
+    /// empty otherwise. ``applyFilters`` does the AND-logic filtering (and a
+    /// default ordering); the trailing ``sortVenues`` is the authoritative sort
+    /// that the user's chosen ``SortOption`` controls.
     var displayedVenues: [VenueListItem] {
         guard case let .loaded(venues) = state else { return [] }
-        return applyFilters(venues, filters, userCoords)
+        let filtered = applyFilters(venues, filters, userCoords)
+        return sortVenues(filtered, by: sortOption)
     }
 
     /// Requests the user's location via the injected service and folds the
@@ -93,11 +102,13 @@ extension VenueListModel {
     static func preview(
         state: LoadState,
         filters: FilterState = .default,
+        sortOption: SortOption = .nearest,
         locationDenied: Bool = false
     ) -> VenueListModel {
         let model = VenueListModel()
         model.state = state
         model.filters = filters
+        model.sortOption = sortOption
         model.locationDenied = locationDenied
         return model
     }
