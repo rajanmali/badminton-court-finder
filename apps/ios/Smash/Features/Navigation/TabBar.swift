@@ -118,6 +118,22 @@ struct TabBar: View {
     }
 }
 
+// MARK: - Layout constants
+
+extension TabBar {
+    /// The total vertical space the floating tab bar reserves above the bottom
+    /// safe area. Use this when laying out content that must stay above the bar
+    /// (e.g. the map preview card, the locate button).
+    ///
+    /// Breakdown:
+    ///   44pt  — capsule height (segment frame height)
+    ///   26pt  — float above safe area (`.padding(.bottom, 26)` in RootTabView)
+    ///    8pt  — gap between content and the top of the capsule
+    /// ───────
+    ///   78pt
+    static let reservedBottomSpace: CGFloat = 44 + 26 + 8
+}
+
 // MARK: - Preview
 
 #Preview("Tab bar — List selected") {

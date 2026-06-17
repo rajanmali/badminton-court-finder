@@ -141,9 +141,12 @@ struct VenueMapScreen: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .padding(.trailing, 16)
-        // Float above the tab bar (~26pt float + bar height + safe area);
-        // raise further when a preview card is showing.
-        .padding(.bottom, selectedVenue == nil ? 100 : 300)
+        // Float above the tab bar when idle; raise clear of the preview card
+        // when one is showing. Both cases use TabBar.reservedBottomSpace so the
+        // button never sits under the tab bar.
+        .padding(.bottom, selectedVenue == nil
+            ? TabBar.reservedBottomSpace
+            : TabBar.reservedBottomSpace + 180)
         .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8),
                    value: selectedVenue == nil)
     }
@@ -157,8 +160,11 @@ struct VenueMapScreen: View {
             onClose: { clearSelection() }
         )
         .padding(.horizontal, 14)
-        // Sit above the floating tab bar.
-        .padding(.bottom, 96)
+        // Float clearly above the tab bar: reservedBottomSpace (tab bar height +
+        // float + gap) plus 12pt extra breathing room. The .ignoresSafeArea below
+        // lets the card's own geometry reach to the screen edge if needed, while
+        // the explicit bottom padding keeps it above the bar regardless of device.
+        .padding(.bottom, TabBar.reservedBottomSpace + 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .ignoresSafeArea(edges: .bottom)
@@ -416,12 +422,14 @@ private struct VenueMapScreenOverlayPreview: View {
                 .glass(.ultraThin, in: Circle())
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(.trailing, 16)
-                .padding(.bottom, selectedVenue == nil ? 100 : 300)
+                .padding(.bottom, selectedVenue == nil
+                    ? TabBar.reservedBottomSpace
+                    : TabBar.reservedBottomSpace + 180)
 
             if let venue = selectedVenue {
                 MapPreviewCard(venue: venue, onViewVenue: {}, onClose: { selectedID = nil })
                     .padding(.horizontal, 14)
-                    .padding(.bottom, 96)
+                    .padding(.bottom, TabBar.reservedBottomSpace + 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
