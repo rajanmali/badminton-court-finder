@@ -61,12 +61,19 @@ struct VenueDetailScreen: View {
 // MARK: - Loaded detail
 
 /// The full loaded layout: scrolling hero + title card + sections, with the
-/// booking CTA pinned via a bottom safe-area inset.
+/// booking CTA pinned via a bottom safe-area inset and the Back/Favourite/Share
+/// chrome pinned as a constant glass top bar (UX fix #6).
 private struct LoadedDetail: View {
     let venue: VenueDetail
     let openURL: OpenURLAction
 
+    /// Vertical scroll offset (points scrolled down from rest). Drives the top
+    /// bar's background fade so the pills stay legible once the hero scrolls away.
+    @State private var scrollOffset: CGFloat = 0
+
     var body: some View {
+        // The chrome is pinned OUTSIDE the ScrollView so it stays fixed at the
+        // top while the hero + content scroll underneath it (UX fix #6).
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HeroView(venue: venue)
@@ -81,14 +88,27 @@ private struct LoadedDetail: View {
                     .padding(.horizontal, Spacing.md)
                     .padding(.top, 20)
 
+                GoodToKnowSection(rateCards: venue.rateCards)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, 20)
+
                 OpeningHoursSection(hours: venue.openingHours)
                     .padding(.horizontal, Spacing.md)
                     .padding(.top, 20)
             }
         }
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            geo.contentOffset.y + geo.contentInsets.top
+        } action: { _, newValue in
+            scrollOffset = newValue
+        }
         .scrollContentBackground(.hidden)
         .background(Color.pageBackground.ignoresSafeArea())
         .ignoresSafeArea(edges: .top)
+        // Pinned, always-visible top bar with a scroll-offset background fade.
+        .overlay(alignment: .top) {
+            PinnedTopBar(venue: venue, scrollOffset: scrollOffset)
+        }
         // Floating CTA pinned to the bottom; the inset reserves space so scroll
         // content clears it.
         .safeAreaInset(edge: .bottom) {
@@ -97,11 +117,49 @@ private struct LoadedDetail: View {
     }
 }
 
+// MARK: - Pinned top bar
+
+/// The constant glass top bar that pins the Back / Favourite / Share chrome to
+/// the top of the screen, staying visible at every scroll position (UX fix #6).
+///
+/// A subtle glass background bar fades in behind the controls once the user has
+/// scrolled past the hero, so the white pill icons stay legible over the light
+/// page content beneath them. The fade is driven by `scrollOffset`.
+private struct PinnedTopBar: View {
+    let venue: VenueDetail
+    let scrollOffset: CGFloat
+
+    /// The hero is 330pt; start fading the background in shortly before its
+    /// bottom edge passes the top bar and reach full opacity once well past it.
+    private var backgroundOpacity: Double {
+        let start: CGFloat = 230
+        let end: CGFloat = 300
+        let clamped = min(max(scrollOffset, start), end)
+        return Double((clamped - start) / (end - start))
+    }
+
+    var body: some View {
+        HeroChrome(venue: venue)
+            .background(alignment: .top) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea(edges: .top)
+                    .overlay(alignment: .bottom) {
+                        Divider().overlay(Color.hairline)
+                    }
+                    .opacity(backgroundOpacity)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
 // MARK: - Hero
 
 /// The full-bleed gradient hero: a green (dedicated) or grey (multi-sport)
 /// gradient layered with faint court lines, halftone, an oversized initial
-/// watermark, top + bottom scrims, and the glass top chrome (back / star / share).
+/// watermark, and top + bottom scrims. The glass chrome (back / star / share)
+/// is no longer drawn here — it is pinned by ``PinnedTopBar`` so it stays
+/// visible while the hero scrolls away (UX fix #6).
 private struct HeroView: View {
     let venue: VenueDetail
 
@@ -152,16 +210,15 @@ private struct HeroView: View {
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 90)
             }
-
-            HeroChrome(venue: venue)
         }
         .frame(height: 330)
         .clipped()
     }
 }
 
-/// The hero's top chrome — a glass back pill (left) and star + share glass pills
-/// (right), all with white icons over the hero. The back pill dismisses; the star
+/// The top chrome — a glass back pill (left) and star + share glass pills
+/// (right), all with white icons. Pinned by ``PinnedTopBar`` so it stays at the
+/// top while content scrolls (UX fix #6). The back pill dismisses; the star
 /// toggles this venue's persisted favourite (UX fix #7); share offers the
 /// booking URL when present.
 private struct HeroChrome: View {
@@ -403,6 +460,68 @@ private struct RatesSection: View {
     }
 }
 
+// MARK: - Good to know section
+
+/// "Good to know" — the long policy notes that no longer fit the inline rate
+/// pills (UX fix #5). Shown only when at least one rate card has a
+/// ``RateCard/policyNote``. Each entry pairs the rate's `label` with its policy
+/// text (wrapping freely), separated by hairlines; identical notes are deduped
+/// so a shared policy (e.g. one cancellation policy on three rates) reads once.
+private struct GoodToKnowSection: View {
+    let rateCards: [RateCard]
+
+    /// One row per distinct policy note, keyed by the note text so identical
+    /// policies collapse. Each row keeps the *first* rate label that carries it.
+    private var entries: [PolicyEntry] {
+        var seen = Set<String>()
+        var result: [PolicyEntry] = []
+        for card in rateCards {
+            guard let note = card.policyNote else { continue }
+            guard seen.insert(note).inserted else { continue }
+            result.append(PolicyEntry(id: card.id, label: card.label, note: note))
+        }
+        return result
+    }
+
+    var body: some View {
+        let entries = entries
+        if !entries.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                DetailSectionTitle(icon: "info.circle", title: "Good to know")
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 {
+                            Divider().overlay(Color.hairline)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(entry.label)
+                                .font(Typography.body)
+                                .tracking(-0.3)
+                                .foregroundStyle(Color.textPrimary)
+                            Text(entry.note)
+                                .font(Typography.caption)
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 13)
+                    }
+                }
+                .padding(.horizontal, Spacing.md)
+                .glass(.regular, in: RoundedRectangle(cornerRadius: Radius.section, style: .continuous))
+            }
+        }
+    }
+}
+
+/// A single "Good to know" row: a rate `label` and its long policy `note`.
+private struct PolicyEntry: Identifiable {
+    let id: String
+    let label: String
+    let note: String
+}
+
 // MARK: - Opening hours section
 
 /// "Opening hours" — a regular-glass card, or a placeholder when no hours exist.
@@ -540,15 +659,18 @@ private func previewVenue(dedicated: Bool) -> VenueDetail {
         bookingUrl: "https://example.com/book",
         platform: .other,
         rateCards: [
+            // Short tag → inline pill on the rate row.
             RateCard(
                 id: "rc-1", label: "Peak hour", priceCents: 3500,
                 daysApply: ["mon", "tue", "wed", "thu", "fri"],
                 timeRangeStart: "17:00", timeRangeEnd: "21:00",
                 notes: "Most popular"
             ),
+            // Long policy note → no pill; appears in "Good to know".
             RateCard(
                 id: "rc-2", label: "Off-peak", priceCents: 2900,
-                daysApply: [], timeRangeStart: nil, timeRangeEnd: nil, notes: nil
+                daysApply: [], timeRangeStart: nil, timeRangeEnd: nil,
+                notes: "Includes public holidays. Racquet hire available during staffed hours 4–10pm."
             ),
         ],
         openingHours: [

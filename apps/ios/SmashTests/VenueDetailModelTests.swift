@@ -107,3 +107,90 @@ struct VenueDetailModelTests {
         #expect(!message.isEmpty)
     }
 }
+
+// MARK: - Rate note classifier (UX fix #5)
+
+/// Exercises ``RateCard/shortTag`` vs ``RateCard/policyNote`` — the pure
+/// classifier that decides whether a note is a short inline tag or long policy
+/// prose for the "Good to know" section.
+struct RateNoteClassifierTests {
+
+    private func card(notes: String?) -> RateCard {
+        RateCard(
+            id: "rc",
+            label: "Peak",
+            priceCents: 3000,
+            daysApply: [],
+            timeRangeStart: nil,
+            timeRangeEnd: nil,
+            notes: notes
+        )
+    }
+
+    @Test func shortTagIsTreatedAsTagNotPolicy() {
+        let c = card(notes: "Most popular")
+        #expect(c.shortTag == "Most popular")
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func anotherShortTag() {
+        let c = card(notes: "Best value")
+        #expect(c.shortTag == "Best value")
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func longPolicyWithCommaIsTreatedAsPolicyNotTag() {
+        let note = "48-hour cancellation policy, payment required at booking"
+        let c = card(notes: note)
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == note)
+    }
+
+    @Test func sentenceWithPeriodIsPolicyEvenIfShortish() {
+        // Contains a period → sentence/policy prose, never a tag.
+        let note = "Booking required."
+        let c = card(notes: note)
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == note)
+    }
+
+    @Test func multiSentencePolicyIsPolicy() {
+        let note = "Includes public holidays. Racquet hire available during staffed hours 4–10pm."
+        let c = card(notes: note)
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == note)
+    }
+
+    @Test func nilNotesAreNeitherTagNorPolicy() {
+        let c = card(notes: nil)
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func blankNotesAreNeitherTagNorPolicy() {
+        let c = card(notes: "   ")
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func tagIsTrimmedOfSurroundingWhitespace() {
+        let c = card(notes: "  Most popular  ")
+        #expect(c.shortTag == "Most popular")
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func boundaryLengthTagIsStillATag() {
+        // Exactly the max length, no period → still a tag.
+        let note = String(repeating: "a", count: RateCard.shortTagMaxLength)
+        let c = card(notes: note)
+        #expect(c.shortTag == note)
+        #expect(c.policyNote == nil)
+    }
+
+    @Test func justOverBoundaryLengthIsPolicy() {
+        let note = String(repeating: "a", count: RateCard.shortTagMaxLength + 1)
+        let c = card(notes: note)
+        #expect(c.shortTag == nil)
+        #expect(c.policyNote == note)
+    }
+}
