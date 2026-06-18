@@ -154,6 +154,48 @@ extension ButtonStyle where Self == PrimaryButtonStyle {
     static var primary: PrimaryButtonStyle { PrimaryButtonStyle() }
 }
 
+// MARK: - Missing data pill
+
+/// A quiet muted capsule indicating that a data point is not available.
+///
+/// Reads as an intentional "no data" chip, not an error. Use wherever
+/// "Rates not listed" / "Hours not listed" placeholders appear so the
+/// treatment is consistent across the app.
+///
+/// - Parameters:
+///   - label: Short description of the missing data (e.g. "Rates not listed").
+///   - icon: Optional SF Symbol name shown before the label. Defaults to
+///     `"minus.circle"`. Pass `nil` to suppress the icon.
+struct MissingDataPill: View {
+    private let label: String
+    private let icon: String?
+
+    /// - Parameters:
+    ///   - label: Short description of the missing data.
+    ///   - icon: Optional SF Symbol name shown before the label.
+    ///     Defaults to `"minus.circle"`. Pass `nil` to suppress the icon.
+    init(_ label: String, icon: String? = "minus.circle") {
+        self.label = label
+        self.icon = icon
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            Text(label)
+                .font(Typography.caption)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.textTertiary)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Color.textTertiary.opacity(0.12), in: Capsule())
+    }
+}
+
 // MARK: - Shimmer
 
 /// A loading-skeleton sweep: a moving light gradient that travels across the
@@ -227,6 +269,12 @@ private var atomsGallery: some View {
         Button("Book a court") {}
             .buttonStyle(.primary)
             .padding(.horizontal, 18)
+
+        // Missing-data pills.
+        HStack(spacing: 8) {
+            MissingDataPill("Rates not listed")
+            MissingDataPill("Hours not listed")
+        }
 
         // Skeleton sample row.
         RoundedRectangle(cornerRadius: 12, style: .continuous)

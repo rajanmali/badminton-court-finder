@@ -301,9 +301,7 @@ private struct MapPreviewCard: View {
                 .tracking(-0.4)
                 .foregroundStyle(Color.green)
         } else {
-            Text("Rates not listed")
-                .font(Typography.caption)
-                .foregroundStyle(Color.textTertiary)
+            MissingDataPill("Rates not listed")
         }
     }
 }
