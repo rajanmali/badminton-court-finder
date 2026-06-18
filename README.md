@@ -1,17 +1,20 @@
 # Smash — Sydney Badminton Finder
 
-A native iOS app (Swift/SwiftUI) that helps Sydney badminton players find venues, compare rates and hours, and — where venue partnerships allow — see live court availability with deep links to each venue's own booking page.
+A native iOS app (Swift/SwiftUI) that helps Sydney badminton players find venues, compare rates and hours, and — where venue partnerships allow — see live court availability with deep links to each venue's own booking page. The UI is a glass-forward design (iOS Materials) on a BWF-court-inspired palette, with light/dark mode and a reduced-transparency fallback.
 
-**Current status: native iOS Phase 1 (static directory) implemented on `dev`. Live availability (Phase 2) and Android are future work.**
+**Current status: native iOS Phase 1 (static directory) implemented on `dev`, with the glass redesign and a UX polish pass landed. Live availability (Phase 2) and Android are future work.**
 
 ---
 
 ## What this app does
 
-- Browse all Sydney badminton venues with rates, opening hours, court count, and amenities
-- Filter by distance, price range, and venue type (dedicated badminton vs. multi-sport)
+- First-run onboarding captures default preferences (location, filters, sort), persisted locally
+- Browse all Sydney badminton venues (List or Map tab) with rates, opening hours, court count, and amenities
+- Filter (distance, price, dedicated-only) and sort (Nearest / Price / Most courts / A–Z) via a shared Filters sheet
+- Save favourite venues (star) — a dedicated **Saved** tab lists them
+- Location-aware: nearest-first when location is granted; a coherent degraded experience (no distance, Price sort) when denied
 - Tap through to each venue's booking page (no in-app payments)
-- For partnered venues: live/near-live court availability ("3 courts free 6–7pm")
+- For partnered venues: live/near-live court availability ("3 courts free 6–7pm") — Phase 2
 - Home screen widget — iOS-first (Phase 4, native WidgetKit extension); Android deferred until product shows traction
 
 ## Tech stack
@@ -74,6 +77,6 @@ Build and run the `Smash` scheme on a simulator or device from Xcode.
 ## Open decisions
 
 - **Accounts**: Supabase project (`sqqymvrqnkypofqlrnjw`) and Maptiler are active and wired. **Expo/EAS decommissioned.** Google Maps/Places not used (MapLibre/Maptiler, ADR-0009). Apple Developer account and Google Play Console confirmed; Google Play deferred until Android work begins.
-- **Design system**: design tokens live in `apps/ios/Smash/DesignSystem/Tokens.swift`; owner to supply expanded tokens/components as needed.
+- **Design system**: the glass design system (tokens, materials, motifs, atoms) lives in `apps/ios/Smash/DesignSystem/` — `Tokens.swift` (BWF-court palette, type scale), `Glass.swift` (material levels + reduced-transparency fallback), `Motifs.swift`, `Components.swift`. User preferences/favourites persist via `apps/ios/Smash/Core/Preferences/AppPreferences.swift`.
 
 See [`docs/00-PROJECT-HANDOFF.md`](docs/00-PROJECT-HANDOFF.md) for full context.

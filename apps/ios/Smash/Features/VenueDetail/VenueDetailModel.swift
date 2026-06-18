@@ -44,3 +44,20 @@ final class VenueDetailModel {
         return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }
+
+// MARK: - Preview / test seam
+
+extension VenueDetailModel {
+    /// Builds a model in a fixed ``VenueDetailLoadState`` — for SwiftUI previews
+    /// and view-layer tests that need to render a specific state without driving
+    /// an async load.
+    ///
+    /// `state` stays `private(set)` for production callers (the only writer is
+    /// ``load(id:using:)``); this factory is the one sanctioned way to seed it
+    /// directly, keeping the invariant intact while making previews trivial.
+    static func preview(state: VenueDetailLoadState) -> VenueDetailModel {
+        let model = VenueDetailModel()
+        model.state = state
+        return model
+    }
+}

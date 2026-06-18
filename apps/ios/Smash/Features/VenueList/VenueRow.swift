@@ -1,100 +1,279 @@
 import SwiftUI
 
-/// A single venue row in the list. Ports `VenueRow.tsx`.
+// MARK: - Card press button style
+
+/// Wraps the glass card content to provide a spring press-scale (0.96×) that
+/// works correctly inside a NavigationLink, which normally swallows
+/// configuration.isPressed.  By making the VenueRow content into a ButtonStyle
+/// body we hook directly into the link's interaction — the NavigationLink(value:)
+/// uses `.buttonStyle(.venueCard)` so SwiftUI routes the press state here.
+struct VenueCardButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let pressSpring = Animation.spring(response: 0.42, dampingFraction: 0.7)
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(reduceMotion ? nil : pressSpring, value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == VenueCardButtonStyle {
+    static var venueCard: VenueCardButtonStyle { VenueCardButtonStyle() }
+}
+
+// MARK: - Venue row (glass V1 card)
+
+/// A single venue card in the list — the glass "V1" design from the handoff.
 ///
-/// Layout: leading column with the name (+ a green "Dedicated" badge) and
-/// suburb; trailing column with the price line, court count, and distance.
+/// Matches the `VenueCard` component in `design_handoff_smash/app/cards.jsx`:
+/// - Container: `.glass(.regular)` with radius 26 and 14 pt padding.
+/// - Left thumbnail: `CourtTile` (58 × 58).
+/// - Middle: name + `DedicatedBadge`; suburb with pin icon; courts + optional distance.
+/// - Right: "FROM" micro label + price in green; or "Rates not listed" when nil; chevron.
+///
+/// Press-scale (0.96, spring) is applied via `VenueCardButtonStyle` so it works
+/// correctly when this view is the label of a `NavigationLink(value:)`.
 struct VenueRow: View {
     let venue: VenueListItem
 
     var body: some View {
-        HStack(alignment: .center, spacing: Spacing.sm) {
-            // Leading: name (+ badge) and suburb.
-            VStack(alignment: .leading, spacing: Spacing.xs / 2) {
-                HStack(spacing: Spacing.sm) {
-                    Text(venue.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.smashText)
-                        .lineLimit(1)
+        HStack(alignment: .center, spacing: 14) {
+            // ── Left: court tile ────────────────────────────────────────
+            CourtTile(
+                initial: String(venue.name.prefix(1)).uppercased(),
+                dedicated: venue.dedicatedBadminton,
+                size: 58
+            )
 
+            // ── Middle: name / suburb / meta ────────────────────────────
+            VStack(alignment: .leading, spacing: 4) {
+                // Name + badge row
+                HStack(spacing: 6) {
+                    Text(venue.name)
+                        .font(Typography.cardTitle)
+                        .tracking(-0.4)
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     if venue.dedicatedBadminton {
-                        dedicatedBadge
+                        DedicatedBadge()
+                            .fixedSize()
                     }
                 }
 
-                Text(venue.suburb)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.smashTextSecondary)
-            }
+                // Suburb row
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.textTertiary)
+                    Text(venue.suburb)
+                        .font(Typography.caption)
+                        .foregroundStyle(Color.textSecondary)
+                }
 
-            Spacer(minLength: Spacing.sm)
-
-            // Trailing: price / courts / distance.
-            VStack(alignment: .trailing, spacing: Spacing.xs / 2) {
-                Text(priceText)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.smashText)
-
-                Text(courtCountText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.smashTextSecondary)
-
-                if let distanceKm = venue.distanceKm {
-                    Text(String(format: "%.1f km", distanceKm))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.smashTextSecondary)
+                // Meta row: courts + optional distance
+                HStack(spacing: 10) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sportscourt.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.textTertiary)
+                        Text(courtCountText)
+                            .font(Typography.caption)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                    if let distanceKm = venue.distanceKm {
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.textTertiary)
+                            Text(String(format: "%.1f km", distanceKm))
+                                .font(Typography.caption)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // ── Right: price / chevron ──────────────────────────────────
+            VStack(alignment: .trailing, spacing: 2) {
+                if let cents = venue.priceFrom {
+                    // "FROM" micro label
+                    Text("FROM")
+                        .font(Typography.micro)
+                        .tracking(0.5)
+                        .foregroundStyle(Color.textTertiary)
+
+                    // Price + /hr
+                    HStack(alignment: .lastTextBaseline, spacing: 1) {
+                        Text("$\(priceDollars(cents))")
+                            .font(Typography.price)
+                            .tracking(-1.0)
+                            .foregroundStyle(Color.green)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text("/hr")
+                            .font(Typography.caption)
+                            .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                } else {
+                    MissingDataPill("Rates not listed")
+                }
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+                    .padding(.top, 6)
+            }
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(14)
+        .glass(.regular, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(cardAccessibilityLabel)
+        .accessibilityAddTraits(.isButton)
     }
 
-    // MARK: - Subviews
-
-    private var dedicatedBadge: some View {
-        Text("Dedicated")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, Spacing.xs / 2)
-            .background(Color.smashPrimary, in: RoundedRectangle(cornerRadius: 4))
-    }
-
-    // MARK: - Derived text
-
-    /// Deliberate delta vs RN: when `priceFrom` is nil we show just
-    /// "Rates not listed" (no "From " prefix). RN renders "From Rates not
-    /// listed" because its template always prepends "From ".
-    private var priceText: String {
-        venue.priceFrom == nil
-            ? "Rates not listed"
-            : "From \(formatPriceCents(venue.priceFrom))"
-    }
+    // MARK: - Helpers
 
     private var courtCountText: String {
         "\(venue.courtCount) " + (venue.courtCount == 1 ? "court" : "courts")
     }
+
+    /// Converts cents to whole dollars (rounding).
+    private func priceDollars(_ cents: Int) -> Int {
+        Int((Double(cents) / 100).rounded())
+    }
+
+    /// A composed accessibility label that conveys name, suburb, price, courts,
+    /// distance, and dedicated status — so VoiceOver users aren't relying on
+    /// color alone to learn that a venue is dedicated.
+    var cardAccessibilityLabel: String {
+        venueCardAccessibilityLabel(venue: venue)
+    }
+}
+
+/// Builds the full VoiceOver card label for a venue list item.
+/// Pure function — testable independently of the view.
+func venueCardAccessibilityLabel(venue: VenueListItem) -> String {
+    var parts: [String] = [venue.name]
+    if venue.dedicatedBadminton {
+        parts.append("Dedicated badminton venue")
+    }
+    parts.append(venue.suburb)
+    if let cents = venue.priceFrom {
+        let dollars = Int((Double(cents) / 100).rounded())
+        parts.append("From $\(dollars) per hour")
+    }
+    let courtWord = venue.courtCount == 1 ? "court" : "courts"
+    parts.append("\(venue.courtCount) \(courtWord)")
+    if let distance = venue.distanceKm {
+        let rounded = (distance * 10).rounded() / 10
+        let distStr = rounded == rounded.rounded()
+            ? "\(Int(rounded))"
+            : String(format: "%.1f", rounded)
+        parts.append("\(distStr) kilometres away")
+    }
+    return parts.joined(separator: ", ")
 }
 
 // MARK: - Preview
 
-#Preview {
-    List {
-        VenueRow(venue: VenueListItem(
-            id: "1", name: "Sydney Olympic Park Badminton Centre",
-            suburb: "Sydney Olympic Park",
-            lat: -33.85, lng: 151.07,
-            courtCount: 12, dedicatedBadminton: true,
-            distanceKm: 3.4, priceFrom: 2800,
-            hasLiveAvailability: true
-        ))
-        VenueRow(venue: VenueListItem(
-            id: "2", name: "Community Sports Hall",
-            suburb: "Parramatta",
-            lat: -33.81, lng: 151.00,
-            courtCount: 1, dedicatedBadminton: false,
-            distanceKm: nil, priceFrom: nil,
-            hasLiveAvailability: false
-        ))
+#Preview("Venue cards — light") {
+    ZStack {
+        SmashBackdrop()
+        ScrollView {
+            VStack(spacing: 13) {
+                // Dedicated venue with price and distance
+                VenueRow(venue: VenueListItem(
+                    id: "1",
+                    name: "Sydney Olympic Park Badminton Centre",
+                    suburb: "Olympic Park",
+                    lat: -33.85, lng: 151.07,
+                    courtCount: 12,
+                    dedicatedBadminton: true,
+                    distanceKm: 3.4,
+                    priceFrom: 2900,
+                    hasLiveAvailability: true
+                ))
+                // Multi-sport, with price
+                VenueRow(venue: VenueListItem(
+                    id: "2",
+                    name: "Auburn Basketball Stadium",
+                    suburb: "Auburn",
+                    lat: -33.85, lng: 151.02,
+                    courtCount: 4,
+                    dedicatedBadminton: false,
+                    distanceKm: 7.1,
+                    priceFrom: 3400,
+                    hasLiveAvailability: false
+                ))
+                // No price, no distance
+                VenueRow(venue: VenueListItem(
+                    id: "3",
+                    name: "Parramatta Community Hall",
+                    suburb: "Parramatta",
+                    lat: -33.81, lng: 151.00,
+                    courtCount: 2,
+                    dedicatedBadminton: false,
+                    distanceKm: nil,
+                    priceFrom: nil,
+                    hasLiveAvailability: false
+                ))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+        }
     }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Venue cards — dark") {
+    ZStack {
+        SmashBackdrop()
+        ScrollView {
+            VStack(spacing: 13) {
+                VenueRow(venue: VenueListItem(
+                    id: "1",
+                    name: "Sydney Olympic Park Badminton Centre",
+                    suburb: "Olympic Park",
+                    lat: -33.85, lng: 151.07,
+                    courtCount: 12,
+                    dedicatedBadminton: true,
+                    distanceKm: 3.4,
+                    priceFrom: 2900,
+                    hasLiveAvailability: true
+                ))
+                VenueRow(venue: VenueListItem(
+                    id: "2",
+                    name: "Auburn Basketball Stadium",
+                    suburb: "Auburn",
+                    lat: -33.85, lng: 151.02,
+                    courtCount: 4,
+                    dedicatedBadminton: false,
+                    distanceKm: 7.1,
+                    priceFrom: 3400,
+                    hasLiveAvailability: false
+                ))
+                VenueRow(venue: VenueListItem(
+                    id: "3",
+                    name: "Parramatta Community Hall",
+                    suburb: "Parramatta",
+                    lat: -33.81, lng: 151.00,
+                    courtCount: 2,
+                    dedicatedBadminton: false,
+                    distanceKm: nil,
+                    priceFrom: nil,
+                    hasLiveAvailability: false
+                ))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+        }
+    }
+    .preferredColorScheme(.dark)
 }

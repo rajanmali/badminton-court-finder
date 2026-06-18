@@ -40,3 +40,13 @@ struct FormatDaysTests {
         #expect(formatDays(["sat", "sun"]) == "Sat, Sun")
     }
 }
+
+// MARK: - dayOfWeek(fromWeekday:) tests
+
+/// `Calendar` weekday (1 = Sun … 7 = Sat) → app 0-based dow (0 = Sun … 6 = Sat).
+/// Drives the "today" highlight in the opening-hours list.
+struct DayOfWeekFromWeekdayTests {
+    @Test func sundayWeekdayOneMapsToZero() { #expect(dayOfWeek(fromWeekday: 1) == 0) }
+    @Test func saturdayWeekdaySevenMapsToSix() { #expect(dayOfWeek(fromWeekday: 7) == 6) }
+    @Test func mondayWeekdayTwoMapsToOne() { #expect(dayOfWeek(fromWeekday: 2) == 1) }
+}

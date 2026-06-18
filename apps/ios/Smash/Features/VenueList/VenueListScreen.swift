@@ -1,117 +1,210 @@
 import SwiftUI
 
-/// The venue list screen. Ports `VenueListScreen.tsx`.
+/// The List tab — the full redesigned List experience.
 ///
-/// Loads venues and requests location concurrently on appear via the injected
-/// ``AppEnvironment``. When data is loaded, renders a ``FilterBar`` above the
-/// venue list (or the empty-state view) — matching the RN behaviour of showing
-/// filters only after the initial load completes.
+/// Assembles the screen top → bottom over a ``SmashBackdrop``: a custom glass
+/// ``ListHeader`` (wordmark + status dot + a ``FiltersButton`` + locate pill) in
+/// place of the system nav bar, then state content that switches on
+/// `model.state` — the loading skeleton (``ListLoadingState``), the loaded
+/// ``ListMetaRow`` + glass ``VenueRow`` cards (or ``ListEmptyState`` when
+/// filtered to zero), and the ``ListErrorState`` on failure.
+///
+/// Filters and Sort live in the shared ``FiltersSheet`` (the same sheet the Map
+/// tab presents), opened from the header's ``FiltersButton`` — so the list
+/// scrolls cleanly under the header with no always-open inline panel.
+///
+/// Mirrors `ListScreen` in `design_handoff_smash/app/screens.jsx`.
 ///
 /// ## @Bindable pattern
 ///
-/// `model` lives in `@State`. SwiftUI 5.1+ allows using `$state.property`
-/// directly when the wrapped value is `@Observable`, but the most reliable
-/// cross-version idiom is to extract a `Bindable` wrapper once in a helper
-/// view that receives the model as `@Bindable`. Here we keep it simple:
-/// the loaded body is extracted into `LoadedBody`, which holds the model
-/// as `@Bindable var model` and creates `$model.filters` for `FilterBar`.
+/// The model is created and owned by ``RootTabView``'s `@State`. This screen
+/// holds a non-owning `@Bindable` reference so it can derive `$model.filters`
+/// and `$model.sortOption` for the ``FiltersSheet`` without changing ownership —
+/// the documented Apple pattern for passing an `@Observable` down the hierarchy.
 struct VenueListScreen: View {
-    @State private var model = VenueListModel()
+    @Bindable var model: VenueListModel
+
+    /// Collaborators (location service, venue repository) for the locate pill
+    /// and the error-state retry.
     @Environment(\.appEnvironment) private var env
 
-    /// Called when a venue is selected (a map pin tap). Forwards id + name to
-    /// the host so it can push the detail onto the navigation path. Defaults to
-    /// a no-op for previews. The `.list` branch still pushes via
-    /// `NavigationLink(value:)`.
+    /// Called when a venue is selected (a card tap routed through the host, or a
+    /// programmatic push). List rows also push via `NavigationLink(value:)`.
     var onSelectVenue: (String, String) -> Void = { _, _ in }
 
+    /// Whether the shared Filters sheet is presented.
+    @State private var showFilters = false
+
     var body: some View {
-        content
-            .navigationTitle("Smash — Find a Court")
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                // Run venue load and location request concurrently — neither
-                // depends on the other and displayedVenues reacts to both.
-                async let venueLoad: Void = model.load(using: env.venueRepository)
-                async let locationLoad: Void = model.loadLocation(using: env.locationService)
-                _ = await (venueLoad, locationLoad)
-            }
+        VStack(spacing: 14) {
+            ListHeader(
+                onLocate: locate,
+                onOpenFilters: { showFilters = true },
+                filtersActive: filtersAreActive(model.filters)
+            )
+            content
+        }
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(SmashBackdrop())
+        // We draw a custom header, so hide the system navigation bar.
+        .toolbar(.hidden, for: .navigationBar)
+        // The shared Filters + Sort sheet — same component the Map tab presents.
+        // Bound straight to the model so edits update the list live behind it.
+        .sheet(isPresented: $showFilters) {
+            FiltersSheet(
+                filters: $model.filters,
+                sort: $model.sortOption,
+                locationDenied: model.locationDenied
+            )
+        }
     }
+
+    // MARK: - State content
 
     @ViewBuilder
     private var content: some View {
         switch model.state {
         case .loading:
-            ProgressView()
-                .controlSize(.large)
-                .tint(.smashPrimary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ListLoadingState()
 
-        case let .failed(message):
-            ContentUnavailableView {
-                Label("Could not load venues", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(message)
-            }
+        case .failed:
+            ListErrorState(onRetry: retry)
 
         case .loaded:
-            LoadedBody(model: model, onSelectVenue: onSelectVenue)
+            loadedBody
         }
+    }
+
+    // MARK: - Loaded body
+
+    /// Meta row + card list — or the empty state when filters match nothing.
+    /// Filters now live in the shared sheet (opened from the header), so the
+    /// list scrolls cleanly under the header with no inline panel. Bottom
+    /// content padding clears the floating tab bar so the last card isn't hidden
+    /// behind it.
+    @ViewBuilder
+    private var loadedBody: some View {
+        if model.displayedVenues.isEmpty {
+            ListEmptyState(onReset: resetFilters)
+        } else {
+            VStack(spacing: 10) {
+                ListMetaRow(
+                    count: model.displayedVenues.count,
+                    sortLabel: model.sortOption.label
+                )
+                cardList
+            }
+        }
+    }
+
+    private var cardList: some View {
+        // ScrollView + LazyVStack so the glass cards float on the backdrop
+        // without a List's white row chrome or cell separators.
+        // NavigationLink(value:) with .buttonStyle(.venueCard) routes press
+        // state into VenueCardButtonStyle, enabling the 0.96× spring scale.
+        ScrollView {
+            LazyVStack(spacing: Spacing.cardGap) {
+                ForEach(model.displayedVenues) { venue in
+                    NavigationLink(
+                        value: Route.venueDetail(id: venue.id, name: venue.name)
+                    ) {
+                        VenueRow(venue: venue)
+                    }
+                    .buttonStyle(.venueCard)
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            // Clear the floating tab bar (floats ~26pt up + its own height).
+            .padding(.bottom, 88)
+        }
+        .scrollContentBackground(.hidden)
+        // Pull-to-refresh: uses refresh() instead of load() so the current
+        // venue list stays visible under the system spinner (no skeleton flash).
+        // The underlying live VenueRepository performs the real fetch.
+        .refreshable {
+            await model.refresh(using: env.venueRepository)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func locate() {
+        Task { await model.loadLocation(using: env.locationService) }
+    }
+
+    private func retry() {
+        Task { await model.load(using: env.venueRepository) }
+    }
+
+    private func resetFilters() {
+        model.filters = .default
     }
 }
 
-// MARK: - LoadedBody
+// MARK: - Previews
 
-/// Renders the FilterBar + list (or empty state) once data is available.
-///
-/// Receiving the model as `@Bindable var model` is the documented Apple pattern
-/// for deriving bindings from an `@Observable` instance that was created and
-/// owned by a parent's `@State`. The parent holds the authoritative instance;
-/// this child view simply holds a non-owning `Bindable` wrapper, giving us
-/// `$model.filters` without changing ownership.
-private struct LoadedBody: View {
-    @Bindable var model: VenueListModel
+private func previewVenues() -> [VenueListItem] {
+    [
+        VenueListItem(
+            id: "1", name: "Sydney Olympic Park Badminton Centre",
+            suburb: "Olympic Park", lat: -33.85, lng: 151.07,
+            courtCount: 12, dedicatedBadminton: true,
+            distanceKm: 3.4, priceFrom: 2900, hasLiveAvailability: true
+        ),
+        VenueListItem(
+            id: "2", name: "Auburn Basketball Stadium",
+            suburb: "Auburn", lat: -33.85, lng: 151.02,
+            courtCount: 4, dedicatedBadminton: false,
+            distanceKm: 7.1, priceFrom: 3400, hasLiveAvailability: false
+        ),
+        VenueListItem(
+            id: "3", name: "Parramatta Community Hall",
+            suburb: "Parramatta", lat: -33.81, lng: 151.00,
+            courtCount: 2, dedicatedBadminton: false,
+            distanceKm: nil, priceFrom: nil, hasLiveAvailability: false
+        ),
+    ]
+}
 
-    /// Forwarded to the map so a pin tap can push the venue detail.
-    let onSelectVenue: (String, String) -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Order matches RN's VenueListScreen.tsx: ViewToggle, then FilterBar,
-            // then the list/map content.
-            ViewToggle(mode: $model.viewMode)
-            FilterBar(
-                filters: $model.filters,
-                locationDenied: model.locationDenied
-            )
-            switch model.viewMode {
-            case .list:
-                listContent
-            case .map:
-                VenueMapView(
-                    venues: model.displayedVenues,
-                    userCoords: model.userCoords,
-                    onVenueTap: onSelectVenue
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
+#Preview("List — loaded, light") {
+    NavigationStack {
+        VenueListScreen(model: .preview(state: .loaded(previewVenues())))
     }
+    .preferredColorScheme(.light)
+}
 
-    @ViewBuilder
-    private var listContent: some View {
-        if model.displayedVenues.isEmpty {
-            ContentUnavailableView(
-                "No venues match your filters.",
-                systemImage: "magnifyingglass"
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            List(model.displayedVenues) { venue in
-                NavigationLink(value: Route.venueDetail(id: venue.id, name: venue.name)) {
-                    VenueRow(venue: venue)
-                }
-            }
-        }
+#Preview("List — loaded, A–Z, dark") {
+    NavigationStack {
+        VenueListScreen(model: .preview(
+            state: .loaded(previewVenues()),
+            sortOption: .alphabetical
+        ))
     }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("List — loading, light") {
+    NavigationStack {
+        VenueListScreen(model: .preview(state: .loading))
+    }
+    .preferredColorScheme(.light)
+}
+
+#Preview("List — empty, dark") {
+    NavigationStack {
+        VenueListScreen(model: .preview(
+            state: .loaded([]),
+            filters: FilterState(radiusKm: 5, maxPriceCents: 3000, dedicatedOnly: true)
+        ))
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("List — error, light") {
+    NavigationStack {
+        VenueListScreen(model: .preview(state: .failed("The network connection was lost.")))
+    }
+    .preferredColorScheme(.light)
 }

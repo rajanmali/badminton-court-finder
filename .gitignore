@@ -5,19 +5,19 @@ node_modules/
 .yarn/build-state.yml
 .pnpm-store/
 
-# Expo / React Native
-.expo/
+# Build output
 dist/
-web-build/
-*.jks
+*.orig.*
+.turbo/
+
+# Tool output
+graphify-out/
+
+# iOS signing
 *.p8
 *.p12
 *.key
 *.mobileprovision
-*.orig.*
-
-# EAS
-.eas/
 
 # Environment
 .env

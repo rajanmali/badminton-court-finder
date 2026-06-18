@@ -7,12 +7,20 @@ struct UserCoords: Sendable, Equatable {
     let longitude: Double
 }
 
-struct FilterState: Sendable, Equatable {
+struct FilterState: Sendable, Equatable, Codable {
     var radiusKm: Double?
     var maxPriceCents: Int?
     var dedicatedOnly: Bool
 
     static let `default` = FilterState(radiusKm: nil, maxPriceCents: nil, dedicatedOnly: false)
+}
+
+/// Whether any filter is engaged (distance, max price, or dedicated-only).
+/// Drives the red "active filters" dot on the Map tab's Filters pill.
+/// Equivalent to `filters != .default`, expressed component-wise so the intent
+/// reads directly and so it is unit-testable in isolation.
+func filtersAreActive(_ filters: FilterState) -> Bool {
+    filters.radiusKm != nil || filters.maxPriceCents != nil || filters.dedicatedOnly
 }
 
 // MARK: - VenueListItem immutable rebuild helper
@@ -84,5 +92,61 @@ func applyFilters(
             return da < db
         }
         return a.name.localizedCompare(b.name) == .orderedAscending
+    }
+}
+
+// MARK: - Sort
+
+/// Order venues by the user-chosen ``SortOption``.
+///
+/// This is the authoritative sort applied after ``applyFilters`` — it is run
+/// over the already-filtered (and distance-enriched) list, so `distanceKm` is
+/// populated when the user's location is known.
+///
+/// Tie-breaks and `nil` handling are deliberate:
+/// - `.nearest`: distance ascending, `nil` distances last. When **no** venue
+///   has a distance (location unknown), falls back to alphabetical so the order
+///   is still stable and sensible.
+/// - `.priceLowToHigh`: `priceFrom` ascending, `nil` prices last.
+/// - `.mostCourts`: `courtCount` descending.
+/// - `.alphabetical`: `name` via `localizedCompare`.
+func sortVenues(_ venues: [VenueListItem], by option: SortOption) -> [VenueListItem] {
+    switch option {
+    case .nearest:
+        // If nothing has a distance, distance can't order anything — fall back
+        // to alphabetical rather than leaving the input order untouched.
+        let anyDistance = venues.contains { $0.distanceKm != nil }
+        guard anyDistance else {
+            return sortVenues(venues, by: .alphabetical)
+        }
+        return venues.sorted { a, b in
+            switch (a.distanceKm, b.distanceKm) {
+            case let (da?, db?): return da < db
+            case (_?, nil):      return true   // a has distance, b doesn't → a first
+            case (nil, _?):      return false  // b has distance, a doesn't → b first
+            case (nil, nil):     return a.name.localizedCompare(b.name) == .orderedAscending
+            }
+        }
+
+    case .priceLowToHigh:
+        return venues.sorted { a, b in
+            switch (a.priceFrom, b.priceFrom) {
+            case let (pa?, pb?): return pa < pb
+            case (_?, nil):      return true   // a has a price, b doesn't → a first
+            case (nil, _?):      return false  // b has a price, a doesn't → b first
+            case (nil, nil):     return a.name.localizedCompare(b.name) == .orderedAscending
+            }
+        }
+
+    case .mostCourts:
+        return venues.sorted { a, b in
+            if a.courtCount != b.courtCount { return a.courtCount > b.courtCount }
+            return a.name.localizedCompare(b.name) == .orderedAscending
+        }
+
+    case .alphabetical:
+        return venues.sorted { a, b in
+            a.name.localizedCompare(b.name) == .orderedAscending
+        }
     }
 }

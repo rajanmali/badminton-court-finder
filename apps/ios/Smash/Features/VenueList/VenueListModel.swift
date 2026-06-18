@@ -32,6 +32,11 @@ final class VenueListModel {
     /// Active filters. Defaults to `.default`; PR 8 makes these live.
     var filters: FilterState = .default
 
+    /// How the venue list is ordered. Defaults to `.nearest`; seeded from the
+    /// user's saved `defaultSort` in ``RootTabView`` and made live via the
+    /// shared Filters sheet's Sort section.
+    var sortOption: SortOption = .nearest
+
     /// The user's coordinates, when known. Populated by ``loadLocation(using:)``.
     var userCoords: UserCoords? = nil
 
@@ -39,10 +44,23 @@ final class VenueListModel {
     /// Drives the distance-chip disabled state and the orange hint in FilterBar.
     var locationDenied: Bool = false
 
-    /// Venues to render: filtered + sorted when loaded, empty otherwise.
+    /// Venues to render: filtered then sorted by ``sortOption`` when loaded,
+    /// empty otherwise. ``applyFilters`` does the AND-logic filtering (and a
+    /// default ordering); the trailing ``sortVenues`` is the authoritative sort
+    /// that the user's chosen ``SortOption`` controls.
     var displayedVenues: [VenueListItem] {
         guard case let .loaded(venues) = state else { return [] }
-        return applyFilters(venues, filters, userCoords)
+        let filtered = applyFilters(venues, filters, userCoords)
+        return sortVenues(filtered, by: sortOption)
+    }
+
+    /// The full loaded venue set, alphabetically by name and *unaffected by the
+    /// active filters or sort*. The Saved tab reads this so favourited venues
+    /// always show regardless of how the List/Map tabs are currently filtered.
+    /// Empty until the list has loaded.
+    var allVenues: [VenueListItem] {
+        guard case let .loaded(venues) = state else { return [] }
+        return venues.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Requests the user's location via the injected service and folds the
@@ -51,17 +69,45 @@ final class VenueListModel {
     /// Uses `LocationOutcome.locationState` — the same helper that the
     /// `LocationOutcomeMappingTests` exercise — so outcome → model mapping
     /// stays in one place.
+    ///
+    /// **Sort fallback (UX fix #4 / spec c):** when location is not available
+    /// (denied *or* unavailable → `userCoords == nil`) and the current sort is
+    /// `.nearest`, the sort is replaced with `.priceLowToHigh` because "Nearest"
+    /// is meaningless without coordinates. A user's explicit non-nearest choice
+    /// is never overridden. Conversely, obtaining a location does NOT force any
+    /// sort change — the user may have already selected a preference.
     func loadLocation(using service: any LocationService) async {
         let outcome = await service.requestLocation()
         let state = outcome.locationState
         self.userCoords = state.coords
         self.locationDenied = state.permissionDenied
+
+        // Apply sort fallback when coordinates are unavailable.
+        if self.userCoords == nil && self.sortOption == .nearest {
+            self.sortOption = .priceLowToHigh
+        }
     }
 
     /// Fetches venues via the injected repository and folds the result into
     /// ``state``. Never throws — failures become ``LoadState/failed(_:)``.
     func load(using repository: any VenueRepository) async {
         state = .loading
+        do {
+            let venues = try await repository.fetchVenues()
+            state = .loaded(venues)
+        } catch {
+            state = .failed(errorMessage(from: error))
+        }
+    }
+
+    /// Re-fetches venues without flipping ``state`` to `.loading` first.
+    ///
+    /// Designed for pull-to-refresh: the existing venues stay visible under the
+    /// system refresh spinner while the request is in flight. On success, ``state``
+    /// transitions directly to `.loaded`; on failure, to `.failed` — so the error
+    /// banner replaces the (possibly stale) list, matching the UX intent.
+    /// Use ``load(using:)`` for the initial page load where the skeleton is appropriate.
+    func refresh(using repository: any VenueRepository) async {
         do {
             let venues = try await repository.fetchVenues()
             state = .loaded(venues)
@@ -77,5 +123,30 @@ final class VenueListModel {
             return description
         }
         return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    }
+}
+
+// MARK: - Preview / test seam
+
+extension VenueListModel {
+    /// Builds a model in a fixed ``LoadState`` with optional filters — for
+    /// SwiftUI previews and view-layer tests that need to render a specific
+    /// state without driving an async load.
+    ///
+    /// `state` stays `private(set)` for production callers (the only writers are
+    /// ``load(using:)``); this factory is the one sanctioned way to seed it
+    /// directly, keeping the invariant intact while making previews trivial.
+    static func preview(
+        state: LoadState,
+        filters: FilterState = .default,
+        sortOption: SortOption = .nearest,
+        locationDenied: Bool = false
+    ) -> VenueListModel {
+        let model = VenueListModel()
+        model.state = state
+        model.filters = filters
+        model.sortOption = sortOption
+        model.locationDenied = locationDenied
+        return model
     }
 }

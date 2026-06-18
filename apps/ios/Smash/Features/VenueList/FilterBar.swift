@@ -2,63 +2,72 @@ import SwiftUI
 
 // MARK: - FilterBar
 
-/// A three-row filter control that mirrors the RN `FilterBar.tsx` component.
+/// A thick-glass panel with three filter rows — DISTANCE, MAX PRICE, and
+/// Dedicated courts only — matching the design_handoff_smash `FilterBar`
+/// (`cards.jsx`, glass level "thick", radius 24).
 ///
-/// - **Distance**: Any / 5 km / 10 km / 20 km chips. Non-"Any" chips are
-///   disabled when location permission was denied.
-/// - **Max price**: Any / ≤$30 / ≤$35 / ≤$40 chips.
-/// - **Dedicated**: a toggle bound to `filters.dedicatedOnly`.
+/// Public API is unchanged from the previous iteration:
+/// `FilterBar(filters: Binding<FilterState>, locationDenied: Bool)`.
 ///
-/// The parent holds the model in `@State` and passes bindings via `@Bindable`.
+/// - **Distance row**: micro "DISTANCE" label + `FilterChip` atoms for
+///   Any / 5 km / 10 km / 20 km. Non-"Any" chips are disabled (dimmed,
+///   non-tappable) when `locationDenied`. A location-denied amber hint
+///   appears below this row.
+/// - **Max price row**: micro "MAX PRICE" label + `FilterChip` atoms for
+///   Any / ≤$30 / ≤$35 / ≤$40.
+/// - **Dedicated courts only**: `bolt.fill` icon + subhead label + iOS Toggle.
+///
+/// Rows are separated by 0.5 pt `Color.hairline` dividers.
 struct FilterBar: View {
 
     @Binding var filters: FilterState
     let locationDenied: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 11) {
             distanceRow
+
             if locationDenied {
                 locationDeniedHint
             }
-            Divider().padding(.vertical, Spacing.xs)
+
+            hairlineDivider
+
             priceRow
-            Divider().padding(.vertical, Spacing.xs)
+
+            hairlineDivider
+
             dedicatedRow
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.smashSurface)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .frame(height: 0.5)
-                .foregroundStyle(Color.smashBorder)
-        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glass(.thick, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 16)
     }
 
-    // MARK: Rows
+    // MARK: - Rows
 
     private var distanceRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("Distance")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.smashText)
+        VStack(alignment: .leading, spacing: 7) {
+            rowLabel("DISTANCE")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: 7) {
                     let options: [(String, Double?)] = [
-                        ("Any", nil),
-                        ("5 km", 5),
-                        ("10 km", 10),
-                        ("20 km", 20),
+                        ("Any",    nil),
+                        ("5 km",   5.0),
+                        ("10 km", 10.0),
+                        ("20 km", 20.0),
                     ]
                     ForEach(options, id: \.0) { title, value in
+                        let isAny = value == nil
+                        let isDisabled = locationDenied && !isAny
                         FilterChip(
                             title: title,
-                            isActive: filters.radiusKm == value,
-                            isDisabled: locationDenied && value != nil
-                        ) {
-                            filters.radiusKm = value
-                        }
+                            isOn: filters.radiusKm == value,
+                            action: { filters.radiusKm = value }
+                        )
+                        .disabled(isDisabled)
+                        .opacity(isDisabled ? 0.4 : 1.0)
                     }
                 }
             }
@@ -67,20 +76,17 @@ struct FilterBar: View {
 
     private var locationDeniedHint: some View {
         Text("Enable location to filter by distance")
-            .font(.system(size: 11))
-            .foregroundStyle(Color.smashWarning)
-            .padding(.top, Spacing.xs)
+            .font(Typography.caption)
+            .foregroundStyle(Color.warning)
     }
 
     private var priceRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("Max price")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.smashText)
+        VStack(alignment: .leading, spacing: 7) {
+            rowLabel("MAX PRICE")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: 7) {
                     let options: [(String, Int?)] = [
-                        ("Any", nil),
+                        ("Any",  nil),
                         ("≤$30", 3000),
                         ("≤$35", 3500),
                         ("≤$40", 4000),
@@ -88,11 +94,9 @@ struct FilterBar: View {
                     ForEach(options, id: \.0) { title, value in
                         FilterChip(
                             title: title,
-                            isActive: filters.maxPriceCents == value,
-                            isDisabled: false
-                        ) {
-                            filters.maxPriceCents = value
-                        }
+                            isOn: filters.maxPriceCents == value,
+                            action: { filters.maxPriceCents = value }
+                        )
                     }
                 }
             }
@@ -100,79 +104,105 @@ struct FilterBar: View {
     }
 
     private var dedicatedRow: some View {
-        Toggle("Dedicated courts only", isOn: $filters.dedicatedOnly)
-            .tint(.smashPrimary)
-            .font(.system(size: 14))
-            .foregroundStyle(Color.smashText)
-    }
-}
-
-// MARK: - FilterChip
-
-/// A rounded-capsule button chip used in `FilterBar`.
-///
-/// Visual states:
-/// - **Active**: `.smashPrimary` background, white text.
-/// - **Inactive**: white/surface background, `.smashBorder` stroke, dark text.
-/// - **Disabled**: light grey background, faint text, non-interactive.
-private struct FilterChip: View {
-    let title: String
-    let isActive: Bool
-    let isDisabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(foregroundColor)
-                .padding(.horizontal, Spacing.sm + Spacing.xs)
-                .padding(.vertical, Spacing.xs + 2)
-                .background(backgroundColor, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(strokeColor, lineWidth: isActive ? 0 : 1)
-                )
+        HStack(spacing: 7) {
+            Image(systemName: "bolt.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.green)
+            Text("Dedicated courts only")
+                .font(Typography.subhead)
+                .tracking(-0.2)
+                .foregroundStyle(Color.textPrimary)
+            Spacer()
+            Toggle("", isOn: $filters.dedicatedOnly)
+                .labelsHidden()
+                .tint(.green)
         }
-        .disabled(isDisabled)
     }
 
-    private var foregroundColor: Color {
-        if isDisabled {
-            return Color.smashTextSecondary.opacity(0.4)
-        }
-        return isActive ? .white : .smashText
+    // MARK: - Helpers
+
+    /// Micro uppercase row label: 11 pt / heavy / tracking 0.5.
+    private func rowLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Typography.micro)
+            .tracking(0.5)
+            .textCase(.uppercase)
+            .foregroundStyle(Color.textTertiary)
     }
 
-    private var backgroundColor: Color {
-        if isDisabled {
-            return Color.smashBorder.opacity(0.3)
-        }
-        return isActive ? .smashPrimary : .smashBackground
-    }
-
-    private var strokeColor: Color {
-        if isDisabled {
-            return Color.smashBorder.opacity(0.5)
-        }
-        return isActive ? .clear : .smashBorder
+    private var hairlineDivider: some View {
+        Color.hairline
+            .frame(height: 0.5)
+            .frame(maxWidth: .infinity)
     }
 }
 
 // MARK: - Previews
 
-#Preview("FilterBar — location available") {
-    @Previewable @State var filters = FilterState.default
-    FilterBar(filters: $filters, locationDenied: false)
-        .padding()
+#Preview("FilterBar — active chips, light") {
+    @Previewable @State var filters = FilterState(
+        radiusKm: 10.0,
+        maxPriceCents: 3500,
+        dedicatedOnly: true
+    )
+    ZStack {
+        SmashBackdrop()
+        VStack {
+            FilterBar(filters: $filters, locationDenied: false)
+            Spacer()
+        }
+        .padding(.top, 40)
+    }
+    .preferredColorScheme(.light)
 }
 
-#Preview("FilterBar — location denied") {
+#Preview("FilterBar — active chips, dark") {
+    @Previewable @State var filters = FilterState(
+        radiusKm: 10.0,
+        maxPriceCents: 3500,
+        dedicatedOnly: true
+    )
+    ZStack {
+        SmashBackdrop()
+        VStack {
+            FilterBar(filters: $filters, locationDenied: false)
+            Spacer()
+        }
+        .padding(.top, 40)
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("FilterBar — location denied, light") {
     @Previewable @State var filters = FilterState(
         radiusKm: nil,
         maxPriceCents: 3500,
         dedicatedOnly: true
     )
-    FilterBar(filters: $filters, locationDenied: true)
-        .padding()
+    ZStack {
+        SmashBackdrop()
+        VStack {
+            FilterBar(filters: $filters, locationDenied: true)
+            Spacer()
+        }
+        .padding(.top, 40)
+    }
+    .preferredColorScheme(.light)
+}
+
+#Preview("FilterBar — location denied, dark") {
+    @Previewable @State var filters = FilterState(
+        radiusKm: nil,
+        maxPriceCents: 3500,
+        dedicatedOnly: true
+    )
+    ZStack {
+        SmashBackdrop()
+        VStack {
+            FilterBar(filters: $filters, locationDenied: true)
+            Spacer()
+        }
+        .padding(.top, 40)
+    }
+    .preferredColorScheme(.dark)
 }

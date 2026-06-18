@@ -20,13 +20,16 @@ import SwiftUI
 struct VenueMapView: View {
     let venues: [VenueListItem]
     let userCoords: UserCoords?
+    /// The currently selected venue id, if any. Drives the enlarged + ringed
+    /// "selected" pin state (passes through to the dot/ring style layers).
+    var selectedID: String?
     let onVenueTap: (String, String) -> Void
 
     var body: some View {
         if AppConfig.maptilerAPIKey.isEmpty {
             Text("Maptiler API key is not set")
                 .font(.system(size: Typography.Size.md))
-                .foregroundStyle(Color.smashTextSecondary)
+                .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(Spacing.lg)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -34,6 +37,7 @@ struct VenueMapView: View {
             VenueMapRepresentable(
                 venues: venues,
                 userCoords: userCoords,
+                selectedID: selectedID,
                 onVenueTap: onVenueTap
             )
             .ignoresSafeArea()
@@ -46,28 +50,32 @@ struct VenueMapView: View {
 /// The attribute dictionary attached to a venue's point feature.
 ///
 /// Factored out as a pure function (no MapLibre types) so the data-driven
-/// values that the style layers depend on — `dedicated` as `0|1` and the
-/// uppercased first letter — are unit-testable without instantiating
-/// `MLNPointFeature`. Mirrors `VenueMap.tsx`'s feature `properties`, plus a
-/// precomputed `letter` (avoids a fragile MGL string-slice expression in the
-/// symbol layer).
-func pinAttributes(for venue: VenueListItem) -> [String: Sendable] {
+/// values that the style layers depend on — `dedicated` as `0|1`, `selected` as
+/// `0|1`, and the uppercased first letter — are unit-testable without
+/// instantiating `MLNPointFeature`. Mirrors `VenueMap.tsx`'s feature
+/// `properties`, plus a precomputed `letter` (avoids a fragile MGL string-slice
+/// expression in the symbol layer).
+///
+/// - Parameter selectedID: when this venue's id matches, `selected` is `1` so
+///   the data-driven dot/ring layers render the enlarged + ringed state.
+func pinAttributes(for venue: VenueListItem, selectedID: String? = nil) -> [String: Sendable] {
     [
         "id": venue.id,
         "name": venue.name,
         "dedicated": venue.dedicatedBadminton ? 1 : 0,
+        "selected": venue.id == selectedID ? 1 : 0,
         "letter": String(venue.name.prefix(1)).uppercased(),
     ]
 }
 
 /// Builds one `MLNPointFeature` per venue, the shape backing the "venues"
 /// source. Coordinate uses CLLocationCoordinate2D (lat, lng); attributes come
-/// from ``pinAttributes(for:)``.
-func makePointFeatures(_ venues: [VenueListItem]) -> [MLNPointFeature] {
+/// from ``pinAttributes(for:selectedID:)``.
+func makePointFeatures(_ venues: [VenueListItem], selectedID: String? = nil) -> [MLNPointFeature] {
     venues.map { venue in
         let feature = MLNPointFeature()
         feature.coordinate = CLLocationCoordinate2D(latitude: venue.lat, longitude: venue.lng)
-        feature.attributes = pinAttributes(for: venue)
+        feature.attributes = pinAttributes(for: venue, selectedID: selectedID)
         return feature
     }
 }
@@ -87,6 +95,10 @@ func makePointFeatures(_ venues: [VenueListItem]) -> [MLNPointFeature] {
 struct VenueMapRepresentable: UIViewRepresentable {
     let venues: [VenueListItem]
     let userCoords: UserCoords?
+    /// The selected venue id. When it changes, `updateUIView` rebuilds the shape
+    /// source so the matching feature's `selected` flag flips and the selected
+    /// pin grows/gains its ring.
+    var selectedID: String?
     let onVenueTap: (String, String) -> Void
 
     /// [lng, lat] order in MapLibre/GeoJSON; here we keep CLLocationCoordinate2D
@@ -98,7 +110,7 @@ struct VenueMapRepresentable: UIViewRepresentable {
     private static let sourceID = "venues"
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(venues: venues, onVenueTap: onVenueTap)
+        Coordinator(venues: venues, selectedID: selectedID, onVenueTap: onVenueTap)
     }
 
     func makeUIView(context: Context) -> MLNMapView {
@@ -126,13 +138,17 @@ struct VenueMapRepresentable: UIViewRepresentable {
         // Keep the coordinator's view of the world current so a later
         // didFinishLoading (and the tap handler) act on the freshest values.
         context.coordinator.venues = venues
+        context.coordinator.selectedID = selectedID
         context.coordinator.onVenueTap = onVenueTap
 
         // When the style is already loaded the source exists; rebuild its shape
-        // so filtered-out venues disappear (matching RN). If the style hasn't
-        // finished loading yet, didFinishLoading will build from these venues.
+        // so filtered-out venues disappear (matching RN) and the selected pin's
+        // `selected` flag flips. If the style hasn't finished loading yet,
+        // didFinishLoading will build from these venues/selection.
         if let source = context.coordinator.shapeSource {
-            source.shape = MLNShapeCollectionFeature(shapes: makePointFeatures(venues))
+            source.shape = MLNShapeCollectionFeature(
+                shapes: makePointFeatures(venues, selectedID: selectedID)
+            )
         }
     }
 
@@ -147,11 +163,24 @@ struct VenueMapRepresentable: UIViewRepresentable {
     /// `MainActor.assumeIsolated` — the established `CLLocationManager` pattern.
     final class Coordinator: NSObject, MLNMapViewDelegate {
         var venues: [VenueListItem]
+        var selectedID: String?
         var onVenueTap: (String, String) -> Void
-        weak var shapeSource: MLNShapeSource?
+        /// Strong reference to the "venues" source. It MUST be strong: when the
+        /// async venue load resolves *after* the style finishes loading, the
+        /// source is built empty at `didFinishLoading` and only populated by the
+        /// later `updateUIView` refresh. A `weak` reference here can deallocate
+        /// before that refresh (MapLibre's `MLNStyle` does not guarantee a strong
+        /// hold once the local `let source` goes out of scope), making the
+        /// refresh silently no-op and leaving the map with zero pins.
+        var shapeSource: MLNShapeSource?
 
-        init(venues: [VenueListItem], onVenueTap: @escaping (String, String) -> Void) {
+        init(
+            venues: [VenueListItem],
+            selectedID: String?,
+            onVenueTap: @escaping (String, String) -> Void
+        ) {
             self.venues = venues
+            self.selectedID = selectedID
             self.onVenueTap = onVenueTap
         }
 
@@ -161,20 +190,63 @@ struct VenueMapRepresentable: UIViewRepresentable {
             MainActor.assumeIsolated {
                 let source = MLNShapeSource(
                     identifier: sourceID,
-                    shape: MLNShapeCollectionFeature(shapes: makePointFeatures(venues)),
+                    shape: MLNShapeCollectionFeature(
+                        shapes: makePointFeatures(venues, selectedID: selectedID)
+                    ),
                     options: nil
                 )
                 style.addSource(source)
                 shapeSource = source
 
-                // Layers added in stacking order: rings (bottom), dots, labels.
+                // Layers added in stacking order: the selected-pin ring (bottom,
+                // a coloured halo only on the selected feature), white rings,
+                // coloured dots, then letter labels (top).
+                style.addLayer(Self.makeSelectedRingLayer(source: source))
                 style.addLayer(Self.makeRingsLayer(source: source))
                 style.addLayer(Self.makeDotsLayer(source: source))
                 style.addLayer(Self.makeLabelsLayer(source: source))
             }
         }
 
-        /// White halo behind each dot. Constant radius/colour/opacity.
+        // ── Pin palette (BWF court) ────────────────────────────────────────
+        // dedicated → greenBright #2BB183, multi-sport → court grey #6B7178.
+        private static let dedicatedColor =
+            UIColor(red: 0x2B / 255.0, green: 0xB1 / 255.0, blue: 0x83 / 255.0, alpha: 1)
+        private static let multiSportColor =
+            UIColor(red: 0x6B / 255.0, green: 0x71 / 255.0, blue: 0x78 / 255.0, alpha: 1)
+
+        /// A coloured halo drawn only behind the *selected* pin, so the selection
+        /// reads as larger + ringed.
+        ///
+        /// Selection is expressed by a `predicate` (`selected == 1`) that filters
+        /// the layer to only the selected feature — NOT by a data-driven
+        /// `circleRadius` keyed on `selected`. A `forMLNMatchingKey:` match on the
+        /// numeric `selected` attribute evaluates to its `default` (radius 0) on
+        /// MapLibre 6.x, which is what made the redesigned pins vanish. Constant
+        /// radius + a predicate filter is the robust form: the halo is a fixed 17
+        /// and simply isn't drawn for unselected pins. The ring colour stays
+        /// data-driven on `dedicated` (that match form is known-good).
+        private static func makeSelectedRingLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
+            let layer = MLNCircleStyleLayer(identifier: "venue-selected-ring", source: source)
+            // Only render for the selected feature.
+            layer.predicate = NSPredicate(format: "selected == 1")
+            // Constant radius — the wide halo behind the selected pin.
+            layer.circleRadius = NSExpression(forConstantValue: 17)
+            // Colour by dedicated/multi-sport so the ring matches the dot.
+            layer.circleColor = NSExpression(
+                forMLNMatchingKey: NSExpression(forKeyPath: "dedicated"),
+                in: [NSExpression(forConstantValue: 1):
+                        NSExpression(forConstantValue: dedicatedColor)],
+                default: NSExpression(forConstantValue: multiSportColor)
+            )
+            // Soft coloured halo.
+            layer.circleOpacity = NSExpression(forConstantValue: 0.35)
+            return layer
+        }
+
+        /// White halo behind each dot. Constant radius/colour/opacity — the
+        /// selected pin reads as raised via the coloured selected-ring layer
+        /// beneath it, not via a per-feature ring size.
         private static func makeRingsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
             let layer = MLNCircleStyleLayer(identifier: "venue-rings", source: source)
             layer.circleRadius = NSExpression(forConstantValue: 13)
@@ -183,14 +255,15 @@ struct VenueMapRepresentable: UIViewRepresentable {
             return layer
         }
 
-        /// The coloured dot. Data-driven: green (#00C853) when `dedicated == 1`,
-        /// else multi-sport blue (#1565C0).
+        /// The coloured dot. Data-driven: greenBright (#2BB183) when
+        /// `dedicated == 1`, else court grey (#6B7178). Radius is constant — a
+        /// data-driven radius keyed on the numeric `selected` attribute resolved
+        /// to 0 on MapLibre 6.x and hid every dot, so selection is now conveyed
+        /// by the coloured selected-ring layer instead.
         private static func makeDotsLayer(source: MLNShapeSource) -> MLNCircleStyleLayer {
             let layer = MLNCircleStyleLayer(identifier: "venue-dots", source: source)
             layer.circleRadius = NSExpression(forConstantValue: 9)
-            let green = UIColor(red: 0x00 / 255.0, green: 0xC8 / 255.0, blue: 0x53 / 255.0, alpha: 1)
-            let blue = UIColor(red: 0x15 / 255.0, green: 0x65 / 255.0, blue: 0xC0 / 255.0, alpha: 1)
-            // Data-driven match on the `dedicated` attribute (1 → green, else blue).
+            // Data-driven match on the `dedicated` attribute (1 → green, else grey).
             // Built with MapLibre's typed match initializer rather than an
             // NSExpression(format:) string: MapLibre 6.x renamed the MGL_* custom
             // expression functions to MLN_*, so the old "MGL_MATCH(...)" format
@@ -198,8 +271,9 @@ struct VenueMapRepresentable: UIViewRepresentable {
             // typed initializer avoids the string parser entirely.
             layer.circleColor = NSExpression(
                 forMLNMatchingKey: NSExpression(forKeyPath: "dedicated"),
-                in: [NSExpression(forConstantValue: 1): NSExpression(forConstantValue: green)],
-                default: NSExpression(forConstantValue: blue)
+                in: [NSExpression(forConstantValue: 1):
+                        NSExpression(forConstantValue: dedicatedColor)],
+                default: NSExpression(forConstantValue: multiSportColor)
             )
             return layer
         }
@@ -222,7 +296,7 @@ struct VenueMapRepresentable: UIViewRepresentable {
                 let point = gesture.location(in: mapView)
                 let features = mapView.visibleFeatures(
                     at: point,
-                    styleLayerIdentifiers: ["venue-dots", "venue-rings"]
+                    styleLayerIdentifiers: ["venue-dots", "venue-rings", "venue-selected-ring"]
                 )
                 guard let feature = features.first,
                       let id = feature.attribute(forKey: "id") as? String,

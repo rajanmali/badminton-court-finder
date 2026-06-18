@@ -104,4 +104,63 @@ struct VenueListLocationTests {
         model.filters.dedicatedOnly = false
         #expect(model.displayedVenues.count == 2)
     }
+
+    // MARK: Sort fallback (UX fix #4 / spec c)
+
+    /// When location is denied and the sort was .nearest, loadLocation must
+    /// replace it with .priceLowToHigh (the non-location default).
+    @Test func loadLocationDenied_withNearestSort_fallsBackToPriceLowToHigh() async {
+        let model = VenueListModel()
+        model.sortOption = .nearest
+        let service = MockLocationService(outcome: .denied)
+
+        await model.loadLocation(using: service)
+
+        #expect(model.locationDenied == true)
+        #expect(model.userCoords == nil)
+        #expect(model.sortOption == .priceLowToHigh,
+                "Nearest sort must fall back to priceLowToHigh when location is denied")
+    }
+
+    /// When location is unavailable (not a permission problem) and the sort was
+    /// .nearest, the fallback still applies — there are no coordinates either way.
+    @Test func loadLocationUnavailable_withNearestSort_fallsBackToPriceLowToHigh() async {
+        let model = VenueListModel()
+        model.sortOption = .nearest
+        let service = MockLocationService(outcome: .unavailable)
+
+        await model.loadLocation(using: service)
+
+        #expect(model.locationDenied == false)
+        #expect(model.userCoords == nil)
+        #expect(model.sortOption == .priceLowToHigh,
+                "Nearest sort must fall back to priceLowToHigh when location is unavailable")
+    }
+
+    /// When location IS granted, the sort must NOT be changed — the user's
+    /// .nearest preference should remain intact.
+    @Test func loadLocationLocated_withNearestSort_doesNotChangeSortOption() async {
+        let model = VenueListModel()
+        model.sortOption = .nearest
+        let service = MockLocationService(outcome: .located(SYDNEY_CBD))
+
+        await model.loadLocation(using: service)
+
+        #expect(model.userCoords == SYDNEY_CBD)
+        #expect(model.sortOption == .nearest,
+                "Nearest sort must not be replaced when location is available")
+    }
+
+    /// A user who explicitly chose a non-nearest sort before denial must not have
+    /// their preference silently replaced.
+    @Test func loadLocationDenied_withExplicitNonNearestSort_doesNotChangeSortOption() async {
+        let model = VenueListModel()
+        model.sortOption = .alphabetical
+        let service = MockLocationService(outcome: .denied)
+
+        await model.loadLocation(using: service)
+
+        #expect(model.sortOption == .alphabetical,
+                "Explicit non-nearest sort must not be overridden by location denial")
+    }
 }
