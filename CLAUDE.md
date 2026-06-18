@@ -2,6 +2,72 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Issue & Epic workflow (mandatory — enforced before any code)
+
+All work starts from a GitHub Issue. No coding without a linked issue.
+
+### Epic format
+
+```
+Title: [EPIC] <feature name>
+
+Body:
+## Goal
+## Scope
+## Success Criteria
+## Sub-issues
+- [ ] #<n>
+```
+
+### Sub-issue format
+
+```
+Title: [type] <short task description>
+
+Body:
+## Summary
+## Acceptance Criteria
+## Test Plan
+## Parent Epic
+Part of #<epic_number>
+```
+
+### Workflow (strict order)
+
+When a feature or change is requested:
+
+1. Check if an Epic exists — if not, create one
+2. Break work into sub-issues under the Epic
+3. Ask which sub-issue to start (or pick smallest unit)
+4. Create branch from `dev`: `type/short-description-issue-<n>`
+5. Implement ONLY that sub-issue
+6. Open PR referencing the issue (`Closes #<n>`)
+
+### Branch naming
+
+```
+feature/booking-ui-issue-123
+fix/payment-bug-issue-456
+```
+
+### PR title
+
+```
+type: description (#issue_number)
+```
+
+PR body must include `Closes #<issue_number>` and link to parent Epic.
+
+### Hard rules
+
+- NO direct commits to `dev` or `main`
+- NO coding without an issue
+- NO PR without passing CI
+- NO large unscoped changes — break into sub-issues first
+- Every sub-issue references its Epic; every PR closes an issue
+
+---
+
 ## Git workflow
 
 | Branch | Rule |
