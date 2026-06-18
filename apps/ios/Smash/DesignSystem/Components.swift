@@ -33,6 +33,7 @@ struct DedicatedBadge: View {
             if showIcon {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 9, weight: .black))
+                    .accessibilityHidden(true)
             }
             Text(label)
                 .font(.system(size: 11, weight: .heavy))
@@ -45,6 +46,8 @@ struct DedicatedBadge: View {
         .padding(.vertical, 3)
         .background(greenAccentGradient, in: Capsule())
         .greenGlow()
+        .accessibilityLabel("Dedicated badminton venue")
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 

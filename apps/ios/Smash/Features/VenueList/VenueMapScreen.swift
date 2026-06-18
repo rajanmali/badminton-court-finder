@@ -139,6 +139,8 @@ struct VenueMapScreen: View {
                 .glass(.ultraThin, in: Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Use my location")
+        .accessibilityHint("Centre the map on your current location")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .padding(.trailing, 16)
         // Float above the tab bar when idle; raise clear of the preview card
@@ -272,6 +274,8 @@ private struct MapPreviewCard: View {
                     .background(Color.chipBackground, in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+            .accessibilityHint("Dismiss the venue preview")
             .padding(12)
         }
     }

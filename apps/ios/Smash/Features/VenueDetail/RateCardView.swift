@@ -13,18 +13,30 @@ import SwiftUI
 ///
 /// Hairline dividers between rows are drawn by the parent section.
 /// Mirrors `RateCard` in `design_handoff_smash/app/screens.jsx`.
+///
+/// Font sizes scale with Dynamic Type via `@ScaledMetric` so the row grows at
+/// larger accessibility text sizes (UX fix #11).
 struct RateCardView: View {
     let rateCard: RateCard
 
+    // MARK: - Dynamic Type scaled metrics
+    // Base design sizes scaled relative to their semantic text style.
+    // These grow/shrink with the user's preferred text size.
+    @ScaledMetric(relativeTo: .body)    private var labelSize:    CGFloat = 17
+    @ScaledMetric(relativeTo: .caption) private var captionSize:  CGFloat = 13
+    @ScaledMetric(relativeTo: .body)    private var priceSize:    CGFloat = 19
+    @ScaledMetric(relativeTo: .caption) private var suffixSize:   CGFloat = 11
+
     var body: some View {
-        HStack(alignment: .center, spacing: Spacing.sm) {
-            // Left: label (+ note pill) + meta line.
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            // Left: label (+ note pill) + meta line. Allow wrapping at larger sizes.
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.sm) {
                     Text(rateCard.label)
-                        .font(Typography.body)
+                        .font(.system(size: labelSize, weight: .semibold))
                         .tracking(-0.3)
                         .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     // Only short, label-like tags go in the inline pill; long
                     // policy text lives in the "Good to know" section.
@@ -34,14 +46,15 @@ struct RateCardView: View {
                 }
 
                 Text(metaLine)
-                    .font(Typography.caption)
+                    .font(.system(size: captionSize, weight: .regular))
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: Spacing.sm)
-
-            // Right: price — the dollar amount in green.
+            // Right: price — the dollar amount in green. Pinned trailing.
             priceLabel
+                .layoutPriority(1)
         }
         .padding(.vertical, 13)
     }
@@ -54,16 +67,16 @@ struct RateCardView: View {
             let amount = String(full[full.startIndex..<slash])
             let suffix = String(full[slash...])
             return Text(amount)
-                .font(.system(size: 19, weight: .black))
+                .font(.system(size: priceSize, weight: .black))
                 .tracking(-0.6)
                 .foregroundStyle(Color.green)
                 + Text(suffix)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: suffixSize, weight: .semibold))
                 .foregroundStyle(Color.textTertiary)
         }
         // No "/hr" suffix (e.g. "Rates not listed") — render whole in green.
         return Text(full)
-            .font(.system(size: 19, weight: .black))
+            .font(.system(size: priceSize, weight: .black))
             .tracking(-0.6)
             .foregroundStyle(Color.green)
             + Text("")
