@@ -1,8 +1,9 @@
 # Project Handoff: Smash — Sydney Badminton Finder
 
-**Status as of:** 14 June 2026
-**Stage:** Native iOS Phase 1 app implemented on `dev`. This document is the
-entry point for picking up Phase 2 work.
+**Status as of:** 18 June 2026
+**Stage:** Native iOS Phase 1 app implemented on `dev`, with the glass redesign
+and a UX polish pass landed. This document is the entry point for picking up
+Phase 2 work.
 
 ## 1. What this project is
 
@@ -44,6 +45,16 @@ Read `01-PRD.md` first for full scope, goals, and non-goals.
   Native/Expo app (`apps/mobile`) and the shared packages (`packages/api-client`,
   `packages/ui`) were removed after native parity was reached (ADR-0010). Design
   tokens now live in `apps/ios/Smash/DesignSystem/Tokens.swift`.
+- **Glass redesign**: a glass-forward UI (iOS Materials, BWF-court palette,
+  light/dark + reduced-transparency fallback, halftone/court-line motifs) across
+  all screens, with a bottom floating List/Map/Saved tab bar. Design system in
+  `apps/ios/Smash/DesignSystem/` (`Glass.swift`, `Motifs.swift`, `Components.swift`).
+- **UX polish pass**: first-run onboarding (default location/filters/sort, persisted
+  via `Core/Preferences/AppPreferences.swift`); filters + sort moved to a shared
+  Filters sheet; favourites + a Saved tab; coherent location-denied handling;
+  persistent venue-detail top bar with a "Good to know" section for long rate
+  policies; pull-to-refresh; muted missing-data pills; and an accessibility pass
+  (VoiceOver, Dynamic Type, colorblind-safe "Dedicated").
 
 ## 3. Key decisions already made (don't re-litigate without reason)
 
