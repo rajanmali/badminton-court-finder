@@ -121,10 +121,7 @@ struct VenueRow: View {
                             .minimumScaleFactor(0.8)
                     }
                 } else {
-                    Text("Rates not\nlisted")
-                        .font(Typography.caption)
-                        .foregroundStyle(Color.textSecondary)
-                        .multilineTextAlignment(.trailing)
+                    MissingDataPill("Rates not listed")
                 }
 
                 // Chevron

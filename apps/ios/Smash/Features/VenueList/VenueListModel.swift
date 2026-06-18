@@ -100,6 +100,22 @@ final class VenueListModel {
         }
     }
 
+    /// Re-fetches venues without flipping ``state`` to `.loading` first.
+    ///
+    /// Designed for pull-to-refresh: the existing venues stay visible under the
+    /// system refresh spinner while the request is in flight. On success, ``state``
+    /// transitions directly to `.loaded`; on failure, to `.failed` — so the error
+    /// banner replaces the (possibly stale) list, matching the UX intent.
+    /// Use ``load(using:)`` for the initial page load where the skeleton is appropriate.
+    func refresh(using repository: any VenueRepository) async {
+        do {
+            let venues = try await repository.fetchVenues()
+            state = .loaded(venues)
+        } catch {
+            state = .failed(errorMessage(from: error))
+        }
+    }
+
     /// Extracts the most user-meaningful message from an error, preferring an
     /// `APIError`'s `errorDescription`.
     private func errorMessage(from error: any Error) -> String {

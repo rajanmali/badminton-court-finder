@@ -69,6 +69,55 @@ struct VenueListModelTests {
         #expect(model.displayedVenues.isEmpty)
     }
 
+    // MARK: refresh(using:)
+
+    /// `refresh` updates the model to `.loaded` without an intermediate `.loading`
+    /// transition — the existing venue list stays intact while the request is in flight.
+    @Test func refreshSuccessUpdatesLoadedVenues() async {
+        // Start with a loaded state (simulating an already-loaded screen).
+        let initial = StubVenueRepository(venues: [makeVenue(id: "a", name: "Alpha")])
+        let model = VenueListModel()
+        await model.load(using: initial)
+
+        guard case .loaded = model.state else {
+            Issue.record("Expected .loaded after initial load")
+            return
+        }
+
+        // Refresh with a fresh set of venues — should update without touching .loading.
+        let refreshed = StubVenueRepository(venues: [
+            makeVenue(id: "b", name: "Bravo"),
+            makeVenue(id: "c", name: "Charlie"),
+        ])
+        await model.refresh(using: refreshed)
+
+        guard case let .loaded(venues) = model.state else {
+            Issue.record("Expected .loaded after refresh, got \(model.state)")
+            return
+        }
+        #expect(venues.count == 2)
+        #expect(model.displayedVenues.map { $0.id }.sorted() == ["b", "c"])
+    }
+
+    /// On a network failure, `refresh` surfaces `.failed` — the error banner
+    /// replaces the (possibly stale) list, so the user can retry.
+    @Test func refreshFailureSurfacesFailedState() async {
+        // Start loaded.
+        let initial = StubVenueRepository(venues: [makeVenue(id: "a", name: "Alpha")])
+        let model = VenueListModel()
+        await model.load(using: initial)
+
+        // Refresh with a repo that throws.
+        let broken = StubVenueRepository(error: APIError.http(statusCode: 503, body: nil))
+        await model.refresh(using: broken)
+
+        guard case let .failed(message) = model.state else {
+            Issue.record("Expected .failed after refresh error, got \(model.state)")
+            return
+        }
+        #expect(!message.isEmpty)
+    }
+
     // MARK: allVenues (Saved tab source)
 
     /// `allVenues` returns the full loaded set sorted A–Z and is *not* narrowed

@@ -438,9 +438,7 @@ private struct RatesSection: View {
 
             Group {
                 if rateCards.isEmpty {
-                    Text("Rates not listed")
-                        .font(Typography.body)
-                        .foregroundStyle(Color.textSecondary)
+                    MissingDataPill("Rates not listed")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 13)
                 } else {
@@ -534,9 +532,7 @@ private struct OpeningHoursSection: View {
 
             Group {
                 if hours.isEmpty {
-                    Text("Hours not listed")
-                        .font(Typography.body)
-                        .foregroundStyle(Color.textSecondary)
+                    MissingDataPill("Hours not listed")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 13)
                 } else {
