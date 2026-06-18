@@ -8,6 +8,9 @@ import SwiftUI
 /// no matching entry or the entry has `isClosed == true`.
 ///
 /// Mirrors the hours block in `design_handoff_smash/app/screens.jsx`.
+///
+/// Font sizes scale with Dynamic Type via `@ScaledMetric` so the rows grow at
+/// larger accessibility text sizes (UX fix #11).
 struct OpeningHoursView: View {
 
     let hours: [OpeningHours]
@@ -20,6 +23,12 @@ struct OpeningHoursView: View {
         dayOfWeek(fromWeekday: Calendar.current.component(.weekday, from: Date()))
     }
 
+    // MARK: - Dynamic Type scaled metrics
+    // Base design sizes scaled relative to their semantic text style.
+    @ScaledMetric(relativeTo: .body)    private var dayLabelSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .caption) private var todayPillSize: CGFloat = 11
+    @ScaledMetric(relativeTo: .body)    private var hoursTextSize: CGFloat = 14.5
+
     var body: some View {
         VStack(spacing: 0) {
             ForEach(dayOrder, id: \.self) { dow in
@@ -27,7 +36,7 @@ struct OpeningHoursView: View {
                 let isClosed = entry == nil || entry?.isClosed == true
                 let isToday = dow == todayDow
 
-                HStack(spacing: Spacing.sm) {
+                HStack(alignment: .center, spacing: Spacing.sm) {
                     // Left: day name (+ today emphasis).
                     HStack(spacing: Spacing.sm) {
                         if isToday {
@@ -38,12 +47,12 @@ struct OpeningHoursView: View {
                         }
 
                         Text(dayLabel(dow))
-                            .font(.system(size: 15, weight: isToday ? .bold : .semibold))
+                            .font(.system(size: dayLabelSize, weight: isToday ? .bold : .semibold))
                             .foregroundStyle(isToday ? Color.textPrimary : Color.textSecondary)
 
                         if isToday {
                             Text("Today")
-                                .font(.system(size: 11, weight: .heavy))
+                                .font(.system(size: todayPillSize, weight: .heavy))
                                 .foregroundStyle(Color.green)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 1)
@@ -55,8 +64,10 @@ struct OpeningHoursView: View {
 
                     // Right: hours or "Closed" (red).
                     Text(hoursText(entry: entry, isClosed: isClosed))
-                        .font(.system(size: 14.5, weight: isToday ? .semibold : .regular))
+                        .font(.system(size: hoursTextSize, weight: isToday ? .semibold : .regular))
                         .foregroundStyle(hoursColor(isClosed: isClosed, isToday: isToday))
+                        .minimumScaleFactor(0.8)
+                        .lineLimit(1)
                 }
                 .padding(.vertical, 11)
 

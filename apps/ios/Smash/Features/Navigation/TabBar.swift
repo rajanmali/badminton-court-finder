@@ -85,6 +85,7 @@ struct TabBar: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
     }
 
     /// The solid green active capsule + glow. Uses `matchedGeometryEffect` so it

@@ -238,6 +238,8 @@ private struct HeroChrome: View {
                     .glass(.ultraThin, in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            .accessibilityHint("Go back to the venue list")
 
             Spacer()
 
@@ -255,12 +257,15 @@ private struct HeroChrome: View {
                             .glass(.ultraThin, in: Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Share")
+                    .accessibilityHint("Share the booking link for this venue")
                 } else {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 40, height: 40)
                         .glass(.ultraThin, in: Circle())
+                        .accessibilityHidden(true)
                 }
             }
         }

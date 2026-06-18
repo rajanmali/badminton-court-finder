@@ -133,6 +133,9 @@ struct VenueRow: View {
         }
         .padding(14)
         .glass(.regular, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(cardAccessibilityLabel)
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Helpers
@@ -145,6 +148,37 @@ struct VenueRow: View {
     private func priceDollars(_ cents: Int) -> Int {
         Int((Double(cents) / 100).rounded())
     }
+
+    /// A composed accessibility label that conveys name, suburb, price, courts,
+    /// distance, and dedicated status — so VoiceOver users aren't relying on
+    /// color alone to learn that a venue is dedicated.
+    var cardAccessibilityLabel: String {
+        venueCardAccessibilityLabel(venue: venue)
+    }
+}
+
+/// Builds the full VoiceOver card label for a venue list item.
+/// Pure function — testable independently of the view.
+func venueCardAccessibilityLabel(venue: VenueListItem) -> String {
+    var parts: [String] = [venue.name]
+    if venue.dedicatedBadminton {
+        parts.append("Dedicated badminton venue")
+    }
+    parts.append(venue.suburb)
+    if let cents = venue.priceFrom {
+        let dollars = Int((Double(cents) / 100).rounded())
+        parts.append("From $\(dollars) per hour")
+    }
+    let courtWord = venue.courtCount == 1 ? "court" : "courts"
+    parts.append("\(venue.courtCount) \(courtWord)")
+    if let distance = venue.distanceKm {
+        let rounded = (distance * 10).rounded() / 10
+        let distStr = rounded == rounded.rounded()
+            ? "\(Int(rounded))"
+            : String(format: "%.1f", rounded)
+        parts.append("\(distStr) kilometres away")
+    }
+    return parts.joined(separator: ", ")
 }
 
 // MARK: - Preview

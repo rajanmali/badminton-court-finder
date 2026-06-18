@@ -60,7 +60,8 @@ struct ListHeader: View {
                 .glass(.ultraThin, in: Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Find courts near me")
+        .accessibilityLabel("Use my location")
+        .accessibilityHint("Find courts near your current location")
     }
 }
 

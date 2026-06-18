@@ -75,7 +75,8 @@ struct FiltersSheet: View {
                     .glass(.regular, in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Done")
+            .accessibilityLabel("Close")
+            .accessibilityHint("Close the filters sheet")
         }
         .padding(.horizontal, Spacing.md)
         .padding(.top, 18)
