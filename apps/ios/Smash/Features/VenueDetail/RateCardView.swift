@@ -7,6 +7,10 @@ import SwiftUI
 /// range is appended only when `timeRangeStart` is present.
 /// Right: the formatted price with the dollar amount in green.
 ///
+/// The inline pill is shown **only** for a short semantic tag
+/// (``RateCard/shortTag`` — e.g. "Most popular"); long policy text moves to the
+/// detail screen's "Good to know" section so the pill never balloons (UX fix #5).
+///
 /// Hairline dividers between rows are drawn by the parent section.
 /// Mirrors `RateCard` in `design_handoff_smash/app/screens.jsx`.
 struct RateCardView: View {
@@ -22,8 +26,10 @@ struct RateCardView: View {
                         .tracking(-0.3)
                         .foregroundStyle(Color.textPrimary)
 
-                    if let notes = rateCard.notes {
-                        NotePill(text: notes)
+                    // Only short, label-like tags go in the inline pill; long
+                    // policy text lives in the "Good to know" section.
+                    if let tag = rateCard.shortTag {
+                        NotePill(text: tag)
                     }
                 }
 
@@ -86,6 +92,9 @@ private struct NotePill: View {
             .tracking(0.3)
             .textCase(.uppercase)
             .foregroundStyle(Color.green)
+            // Guard: a tag pill must never wrap across lines.
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
             .background(Color.green.opacity(0.15), in: Capsule())
@@ -98,6 +107,7 @@ private struct NotePill: View {
     ZStack {
         SmashBackdrop()
         VStack(spacing: 0) {
+            // Short tag → inline pill.
             RateCardView(rateCard: RateCard(
                 id: "1",
                 label: "Peak hour",
@@ -108,6 +118,7 @@ private struct NotePill: View {
                 notes: "Most popular"
             ))
             Divider().overlay(Color.hairline)
+            // Long policy note → no inline pill (moves to "Good to know").
             RateCardView(rateCard: RateCard(
                 id: "2",
                 label: "Off-peak",
@@ -115,7 +126,7 @@ private struct NotePill: View {
                 daysApply: [],
                 timeRangeStart: nil,
                 timeRangeEnd: nil,
-                notes: nil
+                notes: "48-hour cancellation policy, payment required at booking"
             ))
         }
         .padding(.horizontal, Spacing.md)
