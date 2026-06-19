@@ -25,8 +25,8 @@ struct ListLoadingState: View {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.top, Spacing.sm)
-            // Clear the floating tab bar.
-            .padding(.bottom, 88)
+            // Clear the floating tab bar — keep in sync with TabBar.reservedBottomSpace.
+            .padding(.bottom, TabBar.reservedBottomSpace)
         }
         .scrollContentBackground(.hidden)
     }
