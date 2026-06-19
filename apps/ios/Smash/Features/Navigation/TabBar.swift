@@ -128,11 +128,11 @@ extension TabBar {
     ///
     /// Breakdown:
     ///   44pt  — capsule height (segment frame height)
-    ///   26pt  — float above safe area (`.padding(.bottom, 26)` in RootTabView)
+    ///    8pt  — float above safe area (`.padding(.bottom, 8)` in RootTabView)
     ///    8pt  — gap between content and the top of the capsule
     /// ───────
-    ///   78pt
-    static let reservedBottomSpace: CGFloat = 44 + 26 + 8
+    ///   60pt
+    static let reservedBottomSpace: CGFloat = 44 + 8 + 8
 }
 
 // MARK: - Preview

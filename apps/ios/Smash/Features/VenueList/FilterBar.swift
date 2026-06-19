@@ -48,10 +48,10 @@ struct FilterBar: View {
     // MARK: - Rows
 
     private var distanceRow: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 12) {
             rowLabel("DISTANCE")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     let options: [(String, Double?)] = [
                         ("Any",    nil),
                         ("5 km",   5.0),
@@ -81,10 +81,10 @@ struct FilterBar: View {
     }
 
     private var priceRow: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 12) {
             rowLabel("MAX PRICE")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     let options: [(String, Int?)] = [
                         ("Any",  nil),
                         ("≤$30", 3000),

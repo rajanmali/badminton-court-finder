@@ -118,6 +118,11 @@ private struct GlassModifier<S: InsettableShape>: ViewModifier {
             .overlay {
                 shape.strokeBorder(Color.glassBorder, lineWidth: 0.5)
             }
+            // Clip all content (including the material background) to the card
+            // shape so the material doesn't bleed as a square behind the rounded
+            // corners. Clipping here — before the shadow — ensures the shadow is
+            // computed from the rounded alpha mask, not the rectangular content.
+            .clipShape(shape)
             // Two-layer drop shadow approximating the CSS box-shadow. The dark
             // mode CSS shadow is heavier; we approximate with a dynamic shadow
             // color and a slightly larger blur. Under Reduce Transparency we

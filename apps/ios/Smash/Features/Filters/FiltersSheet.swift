@@ -33,7 +33,9 @@ struct FiltersSheet: View {
                 header
 
                 ScrollView {
-                    VStack(spacing: 18) {
+                    // One vertical rhythm throughout: 24pt between groups,
+                    // consistent 16pt horizontal padding on all sections.
+                    VStack(spacing: 24) {
                         // Quiet re-enable prompt: shown when denied and not yet dismissed.
                         if locationDenied && !preferences.locationPromptDismissed {
                             locationPromptBanner
@@ -43,8 +45,8 @@ struct FiltersSheet: View {
 
                         sortSection
                     }
-                    .padding(.top, 4)
-                    .padding(.bottom, 32)
+                    .padding(.top, 8)
+                    .padding(.bottom, 40)
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -154,13 +156,13 @@ struct FiltersSheet: View {
     // MARK: - Sort section
 
     private var sortSection: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("SORT")
                 .font(Typography.micro)
                 .tracking(0.5)
                 .textCase(.uppercase)
                 .foregroundStyle(Color.textTertiary)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
 
             VStack(spacing: 0) {
                 ForEach(Array(SortOption.allCases.enumerated()), id: \.element.id) { index, option in

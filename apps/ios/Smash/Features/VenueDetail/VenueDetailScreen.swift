@@ -226,6 +226,11 @@ private struct HeroChrome: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.preferences) private var preferences
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Window safe area captured at the root (before any ignoresSafeArea modifier
+    // consumes it), injected via RootView. The overlay this chrome lives in has
+    // its own safe area consumed by the parent ScrollView's ignoresSafeArea(.top),
+    // so we cannot read it from the local environment.
+    @Environment(\.windowSafeAreaInsets) private var windowSafeArea
 
     var body: some View {
         HStack {
@@ -271,13 +276,15 @@ private struct HeroChrome: View {
         }
         .padding(.horizontal, Spacing.md)
         .frame(maxHeight: .infinity, alignment: .top)
-        // Push below the status bar.
-        .padding(.top, 50)
+        // Position the row 6pt below the status bar on any device.
+        // Uses the window safe area inset (injected before any ignoresSafeArea
+        // consumes it) rather than a hardcoded constant.
+        .padding(.top, windowSafeArea.top + 6)
     }
 
-    /// The favourite (star) pill. Filled yellow star when saved, outline white
-    /// when not; toggling persists via ``AppPreferences`` with a light haptic and
-    /// a reduce-motion-safe spring. The 40×40 glass circle gives a ≥44pt target.
+    /// The favourite (bookmark) pill. Filled green bookmark when saved, outline
+    /// white when not — matching the tab bar's "Saved" bookmark icon and green
+    /// accent so both surfaces share one metaphor and one color.
     private var favouriteButton: some View {
         let isFavourite = preferences.isFavourite(venue.id)
         return Button {
@@ -290,9 +297,9 @@ private struct HeroChrome: View {
                 }
             }
         } label: {
-            Image(systemName: isFavourite ? "star.fill" : "star")
+            Image(systemName: isFavourite ? "bookmark.fill" : "bookmark")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(isFavourite ? Color.yellow : .white)
+                .foregroundStyle(isFavourite ? Color.green : .white)
                 .frame(width: 40, height: 40)
                 .glass(.ultraThin, in: Circle())
                 .contentTransition(.symbolEffect(.replace))
@@ -599,6 +606,9 @@ private struct BookingCTA: View {
         .glass(.thick, in: RoundedRectangle(cornerRadius: Radius.section, style: .continuous))
         .padding(.horizontal, Spacing.md)
         .padding(.top, 8)
+        // Ensure the bar has breathing room above the home indicator when the
+        // system places this view inside the bottom safe area inset.
+        .padding(.bottom, 8)
     }
 
     /// `$29/hr` with the amount in the primary text color and `/hr` in tertiary.
