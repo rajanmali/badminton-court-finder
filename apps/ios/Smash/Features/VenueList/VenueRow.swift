@@ -54,13 +54,18 @@ struct VenueRow: View {
             // never causes the title to truncate to zero meaningful characters.
             VStack(alignment: .leading, spacing: 3) {
                 // Name — gets the full row width now that the badge is below it.
+                // lineLimit(2) + minimumScaleFactor lets long names show more
+                // context before truncating; truncationMode(.middle) ensures the
+                // distinguishing suffix (e.g. "— Kings Park") survives a long
+                // chain prefix, while the card height stays consistent because
+                // the badge placeholder below locks the VStack to a fixed size.
                 Text(venue.name)
                     .font(Typography.cardTitle)
                     .tracking(-0.4)
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
-                    .truncationMode(.tail)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .truncationMode(.middle)
+                    .minimumScaleFactor(0.88)
 
                 // Badge on its own line — never overlaps with the title.
                 if venue.dedicatedBadminton {
@@ -106,7 +111,7 @@ struct VenueRow: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
 
             // ── Right: price / chevron ──────────────────────────────────
             VStack(alignment: .trailing, spacing: 2) {
