@@ -116,8 +116,9 @@ struct VenueListScreen: View {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
-            // Clear the floating tab bar (floats ~26pt up + its own height).
-            .padding(.bottom, 88)
+            // Clear the floating tab bar — use the shared constant so this
+            // stays in sync with the tab bar's actual float height.
+            .padding(.bottom, TabBar.reservedBottomSpace)
         }
         .scrollContentBackground(.hidden)
         // Pull-to-refresh: uses refresh() instead of load() so the current

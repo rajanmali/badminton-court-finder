@@ -24,4 +24,13 @@ struct AppEnvironment: Sendable {
 extension EnvironmentValues {
     /// The app-wide dependency container. Defaults to ``AppEnvironment/live``.
     @Entry var appEnvironment: AppEnvironment = .live
+
+    /// The window's safe-area insets, injected from ``RootView`` via a
+    /// `GeometryReader` before any `.ignoresSafeArea` modifier is applied.
+    ///
+    /// Use this instead of `proxy.safeAreaInsets` when reading inside a view
+    /// whose parent (or an ancestor) has consumed the safe area with
+    /// `.ignoresSafeArea(edges:)` — in that context the environment-level
+    /// safe area would otherwise be reported as 0.
+    @Entry var windowSafeAreaInsets: EdgeInsets = EdgeInsets()
 }

@@ -56,6 +56,7 @@ enum Route: Hashable {
 /// `@Observable`, that write re-runs `body` and the cover dismisses.
 struct RootView: View {
     @State private var path: [Route] = []
+    @State private var windowSafeAreaInsets: EdgeInsets = EdgeInsets()
     @Environment(\.preferences) private var preferences
 
     var body: some View {
@@ -71,6 +72,20 @@ struct RootView: View {
         .fullScreenCover(isPresented: showOnboarding) {
             OnboardingView()
         }
+        // Capture the window safe area BEFORE any ignoresSafeArea modifier
+        // consumes it, then propagate it down the hierarchy via environment so
+        // views inside ignoresSafeArea contexts (e.g. the Detail hero chrome)
+        // can still position themselves correctly.
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { windowSafeAreaInsets = proxy.safeAreaInsets }
+                    .onChange(of: proxy.safeAreaInsets) { _, insets in
+                        windowSafeAreaInsets = insets
+                    }
+            }
+        }
+        .environment(\.windowSafeAreaInsets, windowSafeAreaInsets)
     }
 
     /// `true` while the user has not completed onboarding. The setter is a no-op:
