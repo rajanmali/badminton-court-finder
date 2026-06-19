@@ -94,6 +94,14 @@ private struct GlassModifier<S: InsettableShape>: ViewModifier {
                     shape.fill(level.material)
                 }
             }
+            // Warm tint overlay: counteracts the blue/cool cast iOS system materials
+            // pick up against dark backgrounds. Kept ≤0.05 so blur translucency is visible.
+            .overlay {
+                if !reduceTransparency {
+                    shape.fill(Color(red: 1.0, green: 0.97, blue: 0.94).opacity(0.05))
+                        .allowsHitTesting(false)
+                }
+            }
             // Top inner sheen — approximates the CSS `inset 0 .75px 0` highlight
             // by overlaying a thin light gradient that fades out from the top
             // edge, masked to the shape. Dropped under Reduce Transparency.
