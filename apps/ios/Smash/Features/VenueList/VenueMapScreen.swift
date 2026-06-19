@@ -114,16 +114,7 @@ struct VenueMapScreen: View {
     }
 
     private var wordmark: some View {
-        HStack(spacing: 7) {
-            Text("Smash")
-                .font(Typography.headline)
-                .tracking(-0.5)
-                .foregroundStyle(Color.textPrimary)
-            Circle()
-                .fill(Color.green)
-                .frame(width: 8, height: 8)
-                .greenGlow()
-        }
+        SmashWordmark(titleFont: Typography.headline, titleTracking: -0.5, dotSize: 8)
     }
 
     // MARK: - Locate button

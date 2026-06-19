@@ -1,5 +1,36 @@
 import SwiftUI
 
+// MARK: - Shared wordmark
+
+/// The "Smash" wordmark used by both the List and Map top-chrome headers.
+/// Parameterised so each caller controls font scale and dot size independently.
+struct SmashWordmark: View {
+    var titleFont: Font = .system(size: 32, weight: .black)
+    var titleTracking: CGFloat = -1.5
+    var dotSize: CGFloat = 9
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("Smash")
+                    .font(titleFont)
+                    .tracking(titleTracking)
+                    .foregroundStyle(Color.textPrimary)
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: dotSize, height: dotSize)
+                    .greenGlow()
+            }
+            if let subtitle {
+                Text(subtitle)
+                    .font(Typography.caption)
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
+    }
+}
+
 // MARK: - List header
 
 /// The custom List-screen header — drawn in place of the system navigation bar.
@@ -28,23 +59,7 @@ struct ListHeader: View {
 
     var body: some View {
         HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(alignment: .center, spacing: 8) {
-                    Text("Smash")
-                        .font(.system(size: 32, weight: .black))
-                        .tracking(-1.5)
-                        .foregroundStyle(Color.textPrimary)
-
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 9, height: 9)
-                        .greenGlow()
-                }
-
-                Text("Find a court")
-                    .font(Typography.caption)
-                    .foregroundStyle(Color.textSecondary)
-            }
+            SmashWordmark(subtitle: "Find a court")
 
             Spacer(minLength: Spacing.md)
 
