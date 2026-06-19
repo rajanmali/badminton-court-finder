@@ -69,8 +69,8 @@ struct SavedScreen: View {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
-            // Clear the floating tab bar (floats ~26pt up + its own height).
-            .padding(.bottom, 88)
+            // Clear the floating tab bar — keep in sync with TabBar.reservedBottomSpace.
+            .padding(.bottom, TabBar.reservedBottomSpace)
         }
         .scrollContentBackground(.hidden)
     }
@@ -126,7 +126,7 @@ private struct SavedEmptyState: View {
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 8)
 
-            Text("Tap the star on a venue to save it here.")
+            Text("Tap the bookmark on a venue to save it here.")
                 .font(Typography.subhead)
                 .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
