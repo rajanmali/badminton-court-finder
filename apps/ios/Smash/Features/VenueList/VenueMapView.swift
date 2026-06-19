@@ -65,6 +65,9 @@ func pinAttributes(for venue: VenueListItem, selectedID: String? = nil) -> [Stri
         "dedicated": venue.dedicatedBadminton ? 1 : 0,
         "selected": venue.id == selectedID ? 1 : 0,
         "letter": String(venue.name.prefix(1)).uppercased(),
+        "price_label": venue.priceFrom.map { cents in
+            "$\(Int((Double(cents) / 100).rounded()))"
+        } ?? "",
     ]
 }
 
@@ -205,6 +208,7 @@ struct VenueMapRepresentable: UIViewRepresentable {
                 style.addLayer(Self.makeRingsLayer(source: source))
                 style.addLayer(Self.makeDotsLayer(source: source))
                 style.addLayer(Self.makeLabelsLayer(source: source))
+                style.addLayer(Self.makePriceLayer(source: source))
             }
         }
 
@@ -285,6 +289,25 @@ struct VenueMapRepresentable: UIViewRepresentable {
             layer.textFontSize = NSExpression(forConstantValue: 11)
             layer.textColor = NSExpression(forConstantValue: UIColor.white)
             layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+            return layer
+        }
+
+        /// Price label below each pin. Shows "$X" when the venue has a price; nothing
+        /// when `price_label` is "". A text halo gives legibility over map tiles.
+        private static func makePriceLayer(source: MLNShapeSource) -> MLNSymbolStyleLayer {
+            let layer = MLNSymbolStyleLayer(identifier: "venue-prices", source: source)
+            layer.text = NSExpression(forKeyPath: "price_label")
+            // Position below the pin: MapLibre text offset is in em units (1em ≈ font size).
+            // With a 10pt font, 2.2em ≈ 22pt below the anchor point — just beneath the dot.
+            layer.textOffset = NSExpression(forConstantValue: CGVector(dx: 0, dy: 2.2))
+            layer.textFontSize = NSExpression(forConstantValue: 10)
+            layer.textColor = NSExpression(forConstantValue: UIColor.white)
+            // Halo for legibility over the map basemap.
+            layer.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(0.55))
+            layer.textHaloWidth = NSExpression(forConstantValue: 1.5)
+            layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+            // textIgnoresPlacement prevents the symbol from hiding other symbols.
+            layer.textIgnoresPlacement = NSExpression(forConstantValue: true)
             return layer
         }
 
