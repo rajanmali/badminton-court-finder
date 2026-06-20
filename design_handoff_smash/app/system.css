@@ -1,0 +1,228 @@
+/* ============================================================
+   SMASH — Design system
+   BWF court palette · iOS glass materials · halftone motif
+   ============================================================ */
+
+/* ---- Brand tokens (theme-independent) ---- */
+:root{
+  /* BWF court green — playing surface */
+  --green:        #00B964;
+  --green-bright: #19D680;
+  --green-deep:   #0A6E42;
+  --green-ink:    #053A23;
+  /* BWF surround red — energy / alerts / CTAs accent */
+  --red:          #E5392B;
+  --red-bright:   #FF5A47;
+  --red-deep:     #9E1E14;
+  /* court grey */
+  --court:        #6B7178;
+
+  /* radii */
+  --r-card: 26px;
+  --r-section: 22px;
+  --r-tile: 15px;
+  --r-chip: 999px;
+  --r-pill: 999px;
+
+  /* type */
+  --sf: -apple-system, "SF Pro Display", "SF Pro Text", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+
+  /* material blur amounts */
+  --blur-ut: 16px;
+  --blur-reg: 24px;
+  --blur-thick: 38px;
+}
+
+/* ---- Light theme ---- */
+[data-theme="light"]{
+  --text:   #16140F;
+  --text-2: rgba(34,31,26,0.60);
+  --text-3: rgba(34,31,26,0.38);
+  --hairline: rgba(20,18,15,0.10);
+  --hairline-strong: rgba(20,18,15,0.16);
+
+  --page: #E9E5DC;
+
+  --glass-bg-ut:    rgba(255,255,255,0.42);
+  --glass-bg-reg:   rgba(255,255,255,0.60);
+  --glass-bg-thick: rgba(251,250,247,0.82);
+  --glass-border:   rgba(255,255,255,0.70);
+  --glass-sheen:    rgba(255,255,255,0.90);
+  --glass-shadow:   0 1px 2px rgba(20,18,15,0.05), 0 12px 34px rgba(20,18,15,0.10);
+
+  --solid-ut:    #F0EEE7;
+  --solid-reg:   #F6F4EF;
+  --solid-thick: #FBFAF7;
+
+  --chip-bg: rgba(255,255,255,0.55);
+  --on-accent: #ffffff;
+
+  --map-water: #BFE0E8;
+  --map-land:  #ECE7DA;
+  --map-park:  #D6E5C9;
+  --map-road:  #FBF8F0;
+  --map-veil:  rgba(233,229,219,0.18);
+}
+
+/* ---- Dark theme ---- */
+[data-theme="dark"]{
+  --text:   #F4F2EC;
+  --text-2: rgba(236,233,225,0.62);
+  --text-3: rgba(236,233,225,0.38);
+  --hairline: rgba(255,255,255,0.10);
+  --hairline-strong: rgba(255,255,255,0.16);
+
+  --page: #0C0E0F;
+
+  --glass-bg-ut:    rgba(60,66,70,0.55);
+  --glass-bg-reg:   rgba(52,58,62,0.72);
+  --glass-bg-thick: rgba(38,43,47,0.85);
+  --glass-border:   rgba(255,255,255,0.16);
+  --glass-sheen:    rgba(255,255,255,0.20);
+  --glass-shadow:   0 2px 6px rgba(0,0,0,0.40), 0 18px 44px rgba(0,0,0,0.40);
+
+  --solid-ut:    #1B1F21;
+  --solid-reg:   #1E2325;
+  --solid-thick: #14181A;
+
+  --chip-bg: rgba(255,255,255,0.08);
+  --on-accent: #04190F;
+
+  --map-water: #16343C;
+  --map-land:  #1B201F;
+  --map-park:  #1C2A1E;
+  --map-road:  #2A3033;
+  --map-veil:  rgba(10,12,12,0.30);
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; }
+body{ font-family: var(--sf); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* ============================================================
+   GLASS MATERIAL
+   ============================================================ */
+.glass{
+  position: relative;
+  background: var(--gbg, var(--glass-bg-reg));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur, var(--blur-reg)));
+  backdrop-filter: saturate(180%) blur(var(--blur, var(--blur-reg)));
+  border: 0.5px solid var(--glass-border);
+  box-shadow:
+    inset 0 0.75px 0 var(--glass-sheen),
+    var(--glass-shadow);
+}
+.m-ultrathin{ --gbg: var(--glass-bg-ut);    --blur: var(--blur-ut); }
+.m-regular  { --gbg: var(--glass-bg-reg);   --blur: var(--blur-reg); }
+.m-thick    { --gbg: var(--glass-bg-thick); --blur: var(--blur-thick); }
+
+/* Edge refraction sheen — a faint light running along the top edge */
+.glass-edge::after{
+  content:"";
+  position:absolute; inset:0; border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(150deg, var(--glass-sheen), transparent 42%, transparent 88%, var(--glass-sheen));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: .6; pointer-events:none;
+}
+
+/* ---- Reduced transparency fallback ---- */
+[data-rt="1"] .glass{
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+[data-rt="1"] .m-ultrathin{ --gbg: var(--solid-ut); }
+[data-rt="1"] .m-regular  { --gbg: var(--solid-reg); }
+[data-rt="1"] .m-thick    { --gbg: var(--solid-thick); }
+[data-rt="1"] .glass-edge::after{ display:none; }
+[data-rt="1"] .rt-hide{ display:none !important; }
+
+/* ============================================================
+   HALFTONE MOTIF
+   ============================================================ */
+.halftone{
+  background-image: radial-gradient(currentColor 1.5px, transparent 1.8px);
+  background-size: 13px 13px;
+  background-position: center;
+}
+.halftone-lg{ background-size: 20px 20px; }
+.halftone-sm{ background-size: 9px 9px; }
+
+/* ============================================================
+   ATOMS
+   ============================================================ */
+.tap{ cursor: pointer; -webkit-tap-highlight-color: transparent; user-select:none; }
+.spring{ transition: transform .42s cubic-bezier(.34,1.56,.64,1), opacity .3s ease, background .25s ease, color .2s ease, box-shadow .3s ease; }
+.tap:active{ transform: scale(0.96); }
+
+.badge-ded{
+  display:inline-flex; align-items:center; gap:5px;
+  background: linear-gradient(180deg, var(--green-bright), var(--green));
+  color: #04190f; font-weight: 800; font-size: 11px; letter-spacing: .3px;
+  text-transform: uppercase; padding: 3px 8px 3px 7px; border-radius: 999px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 2px 8px rgba(0,185,100,.35);
+}
+
+/* segmented control */
+.seg{ position:relative; display:flex; padding:3px; border-radius:999px; }
+.seg-thumb{
+  position:absolute; top:3px; bottom:3px; border-radius:999px;
+  background: var(--seg-thumb, rgba(255,255,255,0.9));
+  box-shadow: 0 1px 3px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.6);
+  transition: transform .42s cubic-bezier(.34,1.4,.5,1), width .42s cubic-bezier(.34,1.4,.5,1);
+}
+.seg-opt{
+  position:relative; z-index:1; flex:1; text-align:center;
+  font-weight:700; font-size:15px; padding:7px 0; letter-spacing:-.2px;
+  transition: color .25s ease;
+}
+
+/* chips */
+.chip{
+  display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  font-weight:650; font-size:14px; letter-spacing:-.2px;
+  padding:8px 14px; border-radius:999px; border:.5px solid var(--glass-border);
+  background: var(--chip-bg); color: var(--text);
+}
+.chip-on{
+  background: linear-gradient(180deg, var(--green-bright), var(--green));
+  color:#04190f; border-color: transparent;
+  box-shadow: 0 2px 10px rgba(0,185,100,.40), inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+/* iOS switch */
+.sw{ width:51px; height:31px; border-radius:999px; position:relative; transition: background .3s ease; flex:none; }
+.sw-knob{ position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff;
+  box-shadow:0 2px 5px rgba(0,0,0,.25); transition: transform .3s cubic-bezier(.34,1.4,.5,1); }
+.sw-on .sw-knob{ transform: translateX(20px); }
+
+/* primary button */
+.btn-primary{
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  width:100%; height:56px; border-radius:18px; border:none;
+  font-family:var(--sf); font-weight:800; font-size:18px; letter-spacing:-.3px;
+  color:#04190f; cursor:pointer;
+  background: linear-gradient(180deg, var(--green-bright), var(--green) 70%, var(--green-deep));
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset, 0 8px 22px rgba(0,185,100,.42), 0 2px 6px rgba(0,0,0,.18);
+}
+
+/* scrollbars hidden in phone */
+.noscroll::-webkit-scrollbar{ display:none; }
+.noscroll{ scrollbar-width:none; }
+
+@keyframes shimmer{ 0%{ background-position: -160% 0;} 100%{ background-position: 260% 0;} }
+.skeleton{
+  background: linear-gradient(100deg, transparent 20%, var(--glass-sheen) 45%, transparent 70%);
+  background-size: 220% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+@keyframes floaty{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-6px);} }
+@keyframes spin{ to{ transform: rotate(360deg);} }
+@keyframes risecard{ from{ transform: translateY(14px);} to{ transform:none;} }
+.rise{ opacity:1; }
+
+@media (prefers-reduced-motion: reduce){
+  .spring, .seg-thumb, .sw-knob, .rise{ transition:none !important; animation:none !important; }
+}

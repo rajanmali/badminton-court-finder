@@ -121,6 +121,17 @@ struct VenueListScreen: View {
             .refreshable {
                 await model.refresh(using: env.venueRepository)
             }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            // Clear the floating tab bar (floats ~26pt up + its own height).
+            .padding(.bottom, 88)
+        }
+        .scrollContentBackground(.hidden)
+        // Pull-to-refresh: uses refresh() instead of load() so the current
+        // venue list stays visible under the system spinner (no skeleton flash).
+        // The underlying live VenueRepository performs the real fetch.
+        .refreshable {
+            await model.refresh(using: env.venueRepository)
         }
     }
 
