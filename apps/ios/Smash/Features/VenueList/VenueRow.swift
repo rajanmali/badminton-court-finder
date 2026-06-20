@@ -146,6 +146,41 @@ struct VenueRow: View {
                     .foregroundStyle(Color.textTertiary)
                     .padding(.top, 6)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // ── Right: price / chevron ──────────────────────────────────
+            VStack(alignment: .trailing, spacing: 2) {
+                if let cents = venue.priceFrom {
+                    // "FROM" micro label
+                    Text("FROM")
+                        .font(Typography.micro)
+                        .tracking(0.5)
+                        .foregroundStyle(Color.textTertiary)
+
+                    // Price + /hr
+                    HStack(alignment: .lastTextBaseline, spacing: 1) {
+                        Text("$\(priceDollars(cents))")
+                            .font(Typography.price)
+                            .tracking(-1.0)
+                            .foregroundStyle(Color.green)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text("/hr")
+                            .font(Typography.caption)
+                            .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                } else {
+                    MissingDataPill("Rates not listed")
+                }
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+                    .padding(.top, 6)
+            }
         }
         .padding(14)
         .glass(.regular, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
