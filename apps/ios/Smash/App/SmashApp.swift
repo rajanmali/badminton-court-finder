@@ -97,14 +97,4 @@ struct RootView: View {
             set: { _ in }
         )
     }
-
-    /// `true` while the user has not completed onboarding. The setter is a no-op:
-    /// the cover is dismissed by ``OnboardingView`` setting `hasSeenOnboarding`,
-    /// not by SwiftUI writing through this binding.
-    private var showOnboarding: Binding<Bool> {
-        Binding(
-            get: { !preferences.hasSeenOnboarding },
-            set: { _ in }
-        )
-    }
 }
