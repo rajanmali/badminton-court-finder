@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Smash — Find a Court</title>
+<link rel="stylesheet" href="app/system.css?v=7" />
+<style>
+  html,body{ height:100%; background:#0A0B0C; }
+  #stage{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:
+      radial-gradient(80% 55% at 50% -8%, rgba(0,185,100,.16), transparent 60%),
+      radial-gradient(70% 50% at 90% 110%, rgba(229,57,43,.10), transparent 60%),
+      #0A0B0C; }
+  #stage .bgdots{ position:absolute; inset:0; color:rgba(255,255,255,.05);
+    background-image: radial-gradient(currentColor 1.4px, transparent 1.6px); background-size:24px 24px; pointer-events:none; }
+  .scaler{ display:flex; flex-direction:column; align-items:center; gap:18px; transform-origin:center center; }
+  .dock{ display:flex; align-items:center; gap:8px; padding:9px; border-radius:22px; color:#fff;
+    background:rgba(28,30,32,.7); -webkit-backdrop-filter:blur(20px) saturate(160%); backdrop-filter:blur(20px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.12); box-shadow:0 20px 50px rgba(0,0,0,.5); }
+  .dseg{ display:flex; background:rgba(255,255,255,.06); border-radius:13px; padding:3px; }
+  .dseg button{ border:none; background:transparent; color:rgba(255,255,255,.55); font-family:var(--sf); font-weight:700; font-size:12.5px;
+    padding:7px 11px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:.2s; white-space:nowrap; }
+  .dseg button.on{ background:rgba(255,255,255,.14); color:#fff; }
+  .dseg button.on.g{ background:linear-gradient(180deg,var(--green-bright),var(--green)); color:#04190f; }
+  .dlabel{ font-size:10px; font-weight:750; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.4); padding:0 4px 0 6px; }
+  .dock a{ color:#fff; text-decoration:none; font-weight:700; font-size:12.5px; padding:7px 12px; border-radius:11px; background:rgba(255,255,255,.06); display:flex; align-items:center; gap:6px; }
+  .dock .sep{ width:.5px; height:26px; background:rgba(255,255,255,.12); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bgdots"></div>
+  <div class="scaler" id="scaler"></div>
+</div>
+
+<script>
+  // init theme/rt before React reads the DOM
+  (function(){
+    const t = localStorage.getItem('smash.theme') || 'dark';
+    const rt = localStorage.getItem('smash.rt') || '0';
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.setAttribute('data-rt', rt);
+  })();
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="app/glass.jsx?v=7"></script>
+<script type="text/babel" src="app/data.jsx?v=7"></script>
+<script type="text/babel" src="app/cards.jsx?v=7"></script>
+<script type="text/babel" src="app/screens.jsx?v=7"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function filterVenues(f) {
+  let out = VENUES.filter(v => {
+    if (f.dedicated && !v.dedicated) return false;
+    if (f.dist !== "any" && v.dist > +f.dist) return false;
+    if (f.price !== "any" && v.from > +f.price) return false;
+    return true;
+  });
+  return out.sort((a, b) => a.dist - b.dist);
+}
+
+function App() {
+  const [theme, setTheme] = useState(document.documentElement.getAttribute("data-theme"));
+  const [rt, setRt] = useState(document.documentElement.getAttribute("data-rt") === "1");
+  const [tab, setTab] = useState("list");
+  const [f, setF] = useState({ dist: "any", price: "any", dedicated: false });
+  const [detail, setDetail] = useState(null);
+  const [pinStyle, setPinStyle] = useState("teardrop");
+  const [state, setState] = useState("loading"); // loading | ready | empty | error
+
+  // simulate initial load
+  useEffect(() => { const t = setTimeout(() => setState("ready"), 1500); return () => clearTimeout(t); }, []);
+
+  const venues = filterVenues(f);
+  const listState = state === "loading" || state === "error" ? state : (venues.length === 0 ? "empty" : "ready");
+
+  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); localStorage.setItem("smash.theme", t); setTheme(t); }
+  function applyRt(on) { document.documentElement.setAttribute("data-rt", on ? "1" : "0"); localStorage.setItem("smash.rt", on ? "1" : "0"); setRt(on); }
+
+  return (
+    <>
+      <Phone statusLight={!!detail || tab === "map"}>
+        {detail
+          ? <DetailScreen v={detail} onBack={() => setDetail(null)} />
+          : <>
+              {tab === "map"
+                ? <MapScreen tab={tab} setTab={setTab} f={f} setF={setF} venues={venues} pinStyle={pinStyle} onOpen={setDetail} />
+                : <ListScreen tab={tab} setTab={setTab} f={f} setF={setF} venues={venues} state={listState}
+                    onOpen={setDetail} onReset={() => setF({ dist: "any", price: "any", dedicated: false })}
+                    onRetry={() => { setState("loading"); setTimeout(() => setState("ready"), 1200); }} />}
+              <TabBar tab={tab} setTab={setTab} />
+            </>}
+      </Phone>
+
+      {/* prototype harness */}
+      <div className="dock">
+        <span className="dlabel">Theme</span>
+        <div className="dseg">
+          <button className={theme === "light" ? "on" : ""} onClick={() => applyTheme("light")}>Light</button>
+          <button className={theme === "dark" ? "on" : ""} onClick={() => applyTheme("dark")}>Dark</button>
+        </div>
+        <div className="sep"></div>
+        <span className="dlabel">Pins</span>
+        <div className="dseg">
+          {[["teardrop","Drop"],["price","Price"],["dot","Dot"]].map(([id,l]) =>
+            <button key={id} className={pinStyle === id ? "on g" : ""} onClick={() => { setPinStyle(id); setTab("map"); }}>{l}</button>)}
+        </div>
+        <div className="sep"></div>
+        <div className="dseg">
+          <button className={rt ? "on" : ""} onClick={() => applyRt(!rt)} title="Reduce transparency accessibility fallback">
+            {rt ? "◑ Reduced" : "◐ Transparency"}
+          </button>
+        </div>
+        <div className="sep"></div>
+        <a href="Design System.html">Design system →</a>
+      </div>
+    </>
+  );
+}
+
+function Root() {
+  const scalerRef = useRef(null);
+  useEffect(() => {
+    function fit() {
+      const el = scalerRef.current; if (!el) return;
+      el.style.transform = "scale(1)";
+      const r = el.getBoundingClientRect();
+      const s = Math.min((window.innerWidth - 40) / r.width, (window.innerHeight - 40) / r.height, 1);
+      el.style.transform = `scale(${s})`;
+    }
+    fit(); window.addEventListener("resize", fit);
+    const id = setInterval(fit, 400); setTimeout(() => clearInterval(id), 2000);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+  return <div ref={scalerRef} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}><App /></div>;
+}
+
+ReactDOM.createRoot(document.getElementById("scaler")).render(<Root />);
+</script>
+</body>
+</html>

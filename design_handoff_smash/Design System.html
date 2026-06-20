@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Smash — Design System</title>
+<link rel="stylesheet" href="app/system.css?v=5" />
+<style>
+  html,body{ height:100%; }
+  body{ background:#0A0B0C; color:var(--text); }
+  #bgdots{ position:fixed; inset:0; color:rgba(255,255,255,.045); background-image:radial-gradient(currentColor 1.4px, transparent 1.6px); background-size:26px 26px; pointer-events:none; z-index:0; }
+  .wrap{ position:relative; z-index:1; max-width:1120px; margin:0 auto; padding:64px 32px 120px; }
+  .eyebrow{ font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--green); }
+  h1{ font-size:60px; font-weight:850; letter-spacing:-2.6px; margin:10px 0 14px; line-height:.95; }
+  .lede{ font-size:18px; line-height:1.55; color:var(--text-2); max-width:640px; }
+  .sec{ margin-top:72px; }
+  .sec-h{ display:flex; align-items:baseline; gap:14px; margin-bottom:24px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .sec-n{ font-family:var(--mono); font-size:13px; color:var(--text-3); font-weight:600; }
+  .sec-t{ font-size:24px; font-weight:800; letter-spacing:-.6px; }
+  .sec-d{ margin-left:auto; font-size:14px; color:var(--text-2); max-width:360px; text-align:right; }
+  .grid{ display:grid; gap:16px; }
+  .plate{ position:relative; border-radius:24px; overflow:hidden; padding:26px; background:
+      radial-gradient(90% 80% at 85% -10%, rgba(0,185,100,.30), transparent 55%),
+      radial-gradient(70% 60% at -10% 110%, rgba(229,57,43,.16), transparent 55%),
+      linear-gradient(160deg, #14181a, #0d0f10); border:1px solid rgba(255,255,255,.07); }
+  .plate-dots{ position:absolute; inset:0; color:rgba(25,214,128,.4);
+      background-image:radial-gradient(currentColor 1.5px, transparent 1.8px); background-size:18px 18px;
+      -webkit-mask:radial-gradient(60% 60% at 88% 8%, #000, transparent 70%); mask:radial-gradient(60% 60% at 88% 8%, #000, transparent 70%); pointer-events:none; }
+  .swatch{ border-radius:16px; height:120px; position:relative; overflow:hidden; padding:14px; display:flex; flex-direction:column; justify-content:flex-end; border:1px solid rgba(255,255,255,.08); }
+  .swatch .nm{ font-weight:750; font-size:14px; }
+  .swatch .hx{ font-family:var(--mono); font-size:12px; opacity:.8; }
+  .swatch .tk{ position:absolute; top:12px; left:14px; font-family:var(--mono); font-size:11px; opacity:.7; }
+  .card-frame{ width:352px; }
+  .label{ font-family:var(--mono); font-size:12px; color:var(--text-3); margin-bottom:10px; }
+  .note{ background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:20px 22px; }
+  .note h4{ margin:0 0 6px; font-size:15px; font-weight:750; display:flex; align-items:center; gap:8px; }
+  .note p{ margin:0; font-size:14px; line-height:1.55; color:var(--text-2); }
+  .backlink{ position:fixed; top:22px; left:22px; z-index:5; display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text); font-weight:700; font-size:14px; padding:9px 15px; border-radius:999px; background:rgba(28,30,32,.7); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border:.5px solid rgba(255,255,255,.12); }
+  .iconcell{ display:flex; flex-direction:column; align-items:center; gap:9px; padding:18px 8px; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
+  .iconcell span{ font-family:var(--mono); font-size:10.5px; color:var(--text-3); }
+</style>
+</head>
+<body data-theme="dark" data-rt="0">
+<div id="bgdots"></div>
+<a class="backlink" href="Smash.html">‹ Back to prototype</a>
+<div class="wrap" id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="app/glass.jsx?v=5"></script>
+<script type="text/babel" src="app/data.jsx?v=5"></script>
+<script type="text/babel" src="app/cards.jsx?v=5"></script>
+
+<script type="text/babel">
+const Section = ({ n, title, desc, children }) => (
+  <div className="sec">
+    <div className="sec-h"><span className="sec-n">{n}</span><span className="sec-t">{title}</span>{desc && <span className="sec-d">{desc}</span>}</div>
+    {children}
+  </div>
+);
+
+const Swatch = ({ bg, nm, hx, tk, ink }) => (
+  <div className="swatch" style={{ background: bg, color: ink ? "#0c0c0c" : "#fff" }}>
+    <span className="tk" style={{ color: ink ? "rgba(0,0,0,.6)" : "rgba(255,255,255,.7)" }}>{tk}</span>
+    <span className="nm">{nm}</span><span className="hx">{hx}</span>
+  </div>
+);
+
+const TypeRow = ({ size, weight, ls, label, sample }) => (
+  <div style={{ display: "flex", alignItems: "baseline", gap: 24, padding: "14px 0", borderTop: "1px solid rgba(255,255,255,.07)" }}>
+    <div style={{ width: 150, flex: "none", fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-3)" }}>{label}<br/>{size}px · {weight}</div>
+    <div style={{ fontSize: size, fontWeight: weight, letterSpacing: ls, color: "var(--text)", lineHeight: 1.05 }}>{sample}</div>
+  </div>
+);
+
+const MatCard = ({ level, blur, use }) => (
+  <Glass level={level} style={{ borderRadius: 18, padding: "20px 18px", minHeight: 130, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+    <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-.3px", textTransform: "capitalize" }}>{level === "ultrathin" ? "Ultra-thin" : level}</div>
+    <div style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--text-2)", marginTop: 4 }}>blur {blur}px · saturate 180%</div>
+    <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 8, lineHeight: 1.4 }}>{use}</div>
+  </Glass>
+);
+
+const Radius = ({ r, nm }) => (
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+    <div style={{ width: 84, height: 84, borderTopLeftRadius: r, background: "linear-gradient(150deg, rgba(255,255,255,.16), rgba(255,255,255,.05))", border: "1px solid rgba(255,255,255,.14)", borderRight: "none", borderBottom: "none" }} />
+    <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-2)" }}>{nm}<br/><span style={{ color: "var(--text-3)" }}>{r}px</span></div>
+  </div>
+);
+
+const ICONS = ["list","map","pin","nav","sliders","dollar","courts","clock","share","star","check","x","info","retry","bolt","shuttle","chevR","plus"];
+
+function Board() {
+  const ded = VENUES.find(v => v.dedicated);
+  const multi = VENUES.find(v => !v.dedicated);
+  return (
+    <>
+      <div className="eyebrow">Smash · Sydney badminton</div>
+      <h1>Design system</h1>
+      <p className="lede">A glass-forward iOS system built on the BWF court palette. Translucent “liquid glass” chrome floats over rich, sporty backdrops — gradients, blurred maps, halftone — while content stays the hero. SF Pro typography, large tap targets, full light + dark, and a reduced-transparency fallback.</p>
+
+      <Section n="01" title="Color — BWF court palette" desc="Green is the signature; BWF red carries energy & alerts; court grey marks multi-sport.">
+        <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+          <Swatch bg="linear-gradient(150deg,#19D680,#00B964)" nm="Court Green" hx="#00B964" tk="--green" ink />
+          <Swatch bg="#0A6E42" nm="Green Deep" hx="#0A6E42" tk="--green-deep" />
+          <Swatch bg="linear-gradient(150deg,#FF5A47,#E5392B)" nm="BWF Red" hx="#E5392B" tk="--red" />
+          <Swatch bg="#6B7178" nm="Court Grey" hx="#6B7178" tk="--court" />
+        </div>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)", marginTop: 16 }}>
+          <Swatch bg="#0C0E0F" nm="Charcoal (dark bg)" hx="#0C0E0F" tk="--page" />
+          <Swatch bg="#16140F" nm="Ink (text)" hx="#16140F" tk="--text" />
+          <Swatch bg="#E9E5DC" nm="Cream (light bg)" hx="#E9E5DC" tk="--page" ink />
+          <Swatch bg="#FBFAF7" nm="Surface" hx="#FBFAF7" tk="--solid-thick" ink />
+        </div>
+      </Section>
+
+      <Section n="02" title="Typography — SF Pro" desc="SF Pro Display for headers (confident heavy weights), SF Pro Text for body & UI.">
+        <div>
+          <TypeRow label="Display" size={40} weight={850} ls="-2px" sample="Find a court" />
+          <TypeRow label="Title" size={26} weight={850} ls="-1px" sample="Concord Oval Recreation Centre" />
+          <TypeRow label="Headline" size={18} weight={800} ls="-.5px" sample="Court hire rates" />
+          <TypeRow label="Body" size={17} weight={600} ls="-.2px" sample="Loftus St, Concord NSW 2137" />
+          <TypeRow label="Subhead" size={15} weight={650} ls="-.2px" sample="Dedicated courts only" />
+          <TypeRow label="Caption" size={13} weight={600} ls="0" sample="8 courts · 10.0 km away" />
+          <TypeRow label="Micro / label" size={11} weight={750} ls=".5px" sample="FROM · DISTANCE · MAX PRICE" />
+        </div>
+      </Section>
+
+      <Section n="03" title="Material & elevation" desc="Three iOS material levels. Deeper blur = higher in the stack.">
+        <div className="plate">
+          <div className="plate-dots"></div>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", position: "relative" }}>
+            <MatCard level="ultrathin" blur={16} use="Chips, pills, compact rows, locate button." />
+            <MatCard level="regular" blur={24} use="Venue cards, detail info sections." />
+            <MatCard level="thick" blur={38} use="Filter bar, floating CTA, preview card, title block." />
+          </div>
+        </div>
+      </Section>
+
+      <Section n="04" title="Corner radii" desc="Soft, generous radii echo iOS continuity curves.">
+        <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
+          <Radius r={999} nm="Pill / chip" />
+          <Radius r={26} nm="Card" />
+          <Radius r={22} nm="Section" />
+          <Radius r={18} nm="Button" />
+          <Radius r={15} nm="Tile" />
+        </div>
+      </Section>
+
+      <Section n="05" title="Iconography" desc="SF-Symbol-style line icons at 2px stroke, on currentColor.">
+        <div className="grid" style={{ gridTemplateColumns: "repeat(9,1fr)" }}>
+          {ICONS.map(n => <div key={n} className="iconcell"><Icon name={n} size={24} style={{ color: "var(--text)" }} /><span>{n}</span></div>)}
+        </div>
+      </Section>
+
+      <Section n="06" title="Components — venue card" desc="Three directions: glass standard, hero strip, compact row.">
+        <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+          <div className="card-frame"><div className="label">V1 · Glass standard (in use)</div><div className="plate" style={{ padding: 16 }}><div className="plate-dots"></div><div style={{ position: "relative" }}><VenueCard v={ded} /></div></div></div>
+          <div className="card-frame"><div className="label">V2 · Hero strip</div><div className="plate" style={{ padding: 16 }}><div className="plate-dots"></div><div style={{ position: "relative" }}><VenueCardHero v={multi} /></div></div></div>
+          <div className="card-frame"><div className="label">V3 · Compact row</div><div className="plate" style={{ padding: 16 }}><div className="plate-dots"></div><div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}><VenueCardCompact v={ded} /><VenueCardCompact v={multi} /></div></div></div>
+        </div>
+      </Section>
+
+      <Section n="07" title="Components — map pins" desc="Dedicated = green · multi-sport = court grey · selected enlarges with a ring.">
+        <div className="plate" style={{ display: "flex", gap: 50, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="plate-dots"></div>
+          {[["Teardrop", PinTeardrop],["Price bubble", PinPrice],["Dot + halo", PinDot]].map(([nm, P]) => (
+            <div key={nm} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <P v={ded} selected={false} /><P v={multi} selected={false} /><P v={ded} selected={true} />
+              </div>
+              <div className="label" style={{ margin: 0 }}>{nm}</div>
+            </div>
+          ))}
+          <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <PinCluster count={4} /><div className="label" style={{ margin: 0 }}>Cluster</div>
+          </div>
+        </div>
+      </Section>
+
+      <Section n="08" title="Components — controls & CTA" desc="Filter bar, chips, switch, badge, and the primary booking action.">
+        <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 22, alignItems: "start" }}>
+          <div className="plate" style={{ padding: 16 }}><div className="plate-dots"></div><div style={{ position: "relative" }}><FilterBarDemo /></div></div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <div className="plate" style={{ padding: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <div className="plate-dots"></div>
+              <div style={{ position: "relative", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <span className="badge-ded">Dedicated</span>
+                <Chip on={true}>Selected</Chip>
+                <Chip on={false}>≤$35</Chip>
+                <Switch on={true} onClick={() => {}} />
+              </div>
+            </div>
+            <button className="btn-primary" style={{ maxWidth: 320 }}>Book a court <Icon name="chevR" size={18} stroke={2.6} /></button>
+          </div>
+        </div>
+      </Section>
+
+      <Section n="09" title="Notes — glass & accessibility">
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="note"><h4><Icon name="bolt" size={16} style={{ color: "var(--green)" }} /> Material hierarchy</h4><p>Chrome recedes; content leads. Glass always sits over a rich backdrop (gradient mesh, blurred map, or court imagery) so translucency reads. A top scrim protects status-bar and header legibility (WCAG AA+) in bright sun or dark room.</p></div>
+          <div className="note"><h4><Icon name="info" size={16} style={{ color: "var(--green)" }} /> Reduced transparency</h4><p>When the user enables Reduce Transparency, every <code style={{fontFamily:"var(--mono)",fontSize:12}}>.glass</code> surface drops its backdrop-blur and switches to a solid token (<code style={{fontFamily:"var(--mono)",fontSize:12}}>--solid-*</code>), preserving the exact layout, hierarchy and contrast. Toggle it live in the prototype’s dock. Dynamic Type, 44px+ tap targets and full dark mode are built in.</p></div>
+        </div>
+      </Section>
+    </>
+  );
+}
+
+function FilterBarDemo() {
+  const [f, setF] = React.useState({ dist: "10", price: "35", dedicated: true });
+  return <FilterBar f={f} setF={setF} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Board />);
+</script>
+</body>
+</html>
