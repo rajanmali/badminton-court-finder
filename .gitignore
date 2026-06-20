@@ -8,10 +8,6 @@ node_modules/
 # Build output
 dist/
 *.orig.*
-.turbo/
-
-# Tool output
-graphify-out/
 
 # iOS signing
 *.p8

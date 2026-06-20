@@ -94,6 +94,14 @@ private struct GlassModifier<S: InsettableShape>: ViewModifier {
                     shape.fill(level.material)
                 }
             }
+            // Warm tint overlay: counteracts the blue/cool cast iOS system materials
+            // pick up against dark backgrounds. Kept ≤0.05 so blur translucency is visible.
+            .overlay {
+                if !reduceTransparency {
+                    shape.fill(Color(red: 1.0, green: 0.97, blue: 0.94).opacity(0.05))
+                        .allowsHitTesting(false)
+                }
+            }
             // Top inner sheen — approximates the CSS `inset 0 .75px 0` highlight
             // by overlaying a thin light gradient that fades out from the top
             // edge, masked to the shape. Dropped under Reduce Transparency.
@@ -118,6 +126,11 @@ private struct GlassModifier<S: InsettableShape>: ViewModifier {
             .overlay {
                 shape.strokeBorder(Color.glassBorder, lineWidth: 0.5)
             }
+            // Clip all content (including the material background) to the card
+            // shape so the material doesn't bleed as a square behind the rounded
+            // corners. Clipping here — before the shadow — ensures the shadow is
+            // computed from the rounded alpha mask, not the rectangular content.
+            .clipShape(shape)
             // Two-layer drop shadow approximating the CSS box-shadow. The dark
             // mode CSS shadow is heavier; we approximate with a dynamic shadow
             // color and a slightly larger blur. Under Reduce Transparency we

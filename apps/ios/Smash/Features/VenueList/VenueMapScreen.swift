@@ -114,16 +114,7 @@ struct VenueMapScreen: View {
     }
 
     private var wordmark: some View {
-        HStack(spacing: 7) {
-            Text("Smash")
-                .font(Typography.headline)
-                .tracking(-0.5)
-                .foregroundStyle(Color.textPrimary)
-            Circle()
-                .fill(Color.green)
-                .frame(width: 8, height: 8)
-                .greenGlow()
-        }
+        SmashWordmark(titleFont: Typography.headline, titleTracking: -0.5, dotSize: 8)
     }
 
     // MARK: - Locate button
@@ -269,7 +260,9 @@ private struct MapPreviewCard: View {
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(Color.textSecondary)
+                    // textPrimary meets WCAG AA (4.5:1) on the card surface;
+                    // textSecondary was too light against the near-white glass.
+                    .foregroundStyle(Color.textPrimary)
                     .frame(width: 28, height: 28)
                     .background(Color.chipBackground, in: Circle())
             }
@@ -296,14 +289,21 @@ private struct MapPreviewCard: View {
             : String(format: "%.1f", rounded)
     }
 
-    /// "From $X/hr" in green, or "Rates not listed" when no price is known.
+    /// Price block: "FROM" micro label + price in green, or "Rates not listed" pill.
     @ViewBuilder
     private var priceLabel: some View {
         if venue.priceFrom != nil {
-            Text("From \(formatPriceCents(venue.priceFrom))")
-                .font(.system(size: 16, weight: .heavy))
-                .tracking(-0.4)
-                .foregroundStyle(Color.green)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("FROM")
+                    .font(Typography.micro)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Color.textTertiary)
+                Text(formatPriceCents(venue.priceFrom))
+                    .font(.system(size: 16, weight: .heavy))
+                    .tracking(-0.4)
+                    .foregroundStyle(Color.green)
+            }
         } else {
             MissingDataPill("Rates not listed")
         }

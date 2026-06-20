@@ -40,8 +40,8 @@ struct RootTabView: View {
             // projection directly — no local `@Bindable` shadow, which would put
             // the model in a non-isolated local and break the `.task` send below.
             TabBar(selection: $model.viewMode)
-                // Float ~26pt above the bottom safe area.
-                .padding(.bottom, 26)
+                // Float 8pt above the bottom safe area (home indicator edge).
+                .padding(.bottom, 8)
                 .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .background(Color.pageBackground.ignoresSafeArea())

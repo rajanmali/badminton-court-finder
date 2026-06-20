@@ -48,22 +48,35 @@ struct VenueRow: View {
             )
 
             // ── Middle: name / suburb / meta ────────────────────────────
-            VStack(alignment: .leading, spacing: 4) {
-                // Name + badge row
-                HStack(spacing: 6) {
-                    Text(venue.name)
-                        .font(Typography.cardTitle)
-                        .tracking(-0.4)
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    if venue.dedicatedBadminton {
-                        DedicatedBadge()
-                            .fixedSize()
-                    }
+            // Fixed height so all cards in the list share the same row height
+            // regardless of whether they show a Dedicated badge. The badge moves
+            // to its own line below the name so it never competes for space and
+            // never causes the title to truncate to zero meaningful characters.
+            VStack(alignment: .leading, spacing: 3) {
+                // Name — gets the full row width now that the badge is below it.
+                // lineLimit(2) + minimumScaleFactor lets long names show more
+                // context before truncating; truncationMode(.middle) ensures the
+                // distinguishing suffix (e.g. "— Kings Park") survives a long
+                // chain prefix, while the card height stays consistent because
+                // the badge placeholder below locks the VStack to a fixed size.
+                Text(venue.name)
+                    .font(Typography.cardTitle)
+                    .tracking(-0.4)
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .minimumScaleFactor(0.88)
+
+                // Badge on its own line — never overlaps with the title.
+                if venue.dedicatedBadminton {
+                    DedicatedBadge()
+                        .fixedSize()
+                } else {
+                    // Reserve the same height so non-dedicated cards stay aligned.
+                    Color.clear.frame(height: 20)
                 }
 
-                // Suburb row
+                // Suburb row — single line, never wraps.
                 HStack(spacing: 4) {
                     Image(systemName: "mappin")
                         .font(.system(size: 11, weight: .semibold))
@@ -71,9 +84,10 @@ struct VenueRow: View {
                     Text(venue.suburb)
                         .font(Typography.caption)
                         .foregroundStyle(Color.textSecondary)
+                        .lineLimit(1)
                 }
 
-                // Meta row: courts + optional distance
+                // Meta row: courts + optional distance — single line, never wraps.
                 HStack(spacing: 10) {
                     HStack(spacing: 4) {
                         Image(systemName: "sportscourt.fill")
@@ -82,6 +96,7 @@ struct VenueRow: View {
                         Text(courtCountText)
                             .font(Typography.caption)
                             .foregroundStyle(Color.textSecondary)
+                            .lineLimit(1)
                     }
                     if let distanceKm = venue.distanceKm {
                         HStack(spacing: 4) {
@@ -91,11 +106,12 @@ struct VenueRow: View {
                             Text(String(format: "%.1f km", distanceKm))
                                 .font(Typography.caption)
                                 .foregroundStyle(Color.textSecondary)
+                                .lineLimit(1)
                         }
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
 
             // ── Right: price / chevron ──────────────────────────────────
             VStack(alignment: .trailing, spacing: 2) {
